@@ -1,0 +1,27 @@
+# render.yaml — F.R.I.D.A.Y. Auto-Deploy
+# Docs: https://render.com/docs/yaml
+
+services:
+  - type: web
+    name: friday-ai
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: uv sync --frozen && uv build
+    startCommand: uv run python server.py
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: groq
+      - key: TTS_PROVIDER
+        value: gtts
+      - key: GROQ_LLM_MODEL
+        value: llama-3.3-70b-versatile
+      - key: TTS_SPEED
+        value: 1.15
+      - key: GTTS_LANG
+        value: en
+      - key: STT_PROVIDER
+        value: whisper
