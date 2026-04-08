@@ -40,7 +40,7 @@ register_all_resources(mcp)
 # ---------------------------------------------------------------------------
 
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse, FileResponse
 from starlette.routing import Route, Mount
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
@@ -206,6 +206,10 @@ async def root(request):
     )
 
 
+async def web_demo(request):
+    return FileResponse("web_demo/index.html")
+
+
 starlette_app = Starlette(
     routes=[
         Route("/", root),
@@ -213,6 +217,8 @@ starlette_app = Starlette(
         Route("/chat", chat, methods=["POST"]),
         Route("/tools", list_tools_http),
         Route("/call_tool", call_tool, methods=["POST"]),
+        Route("/demo", web_demo),
+        Route("/web_demo", web_demo),
         Mount("/sse", app=mcp.streamable_http_app()),
     ],
     middleware=[
