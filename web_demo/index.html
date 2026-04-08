@@ -828,6 +828,170 @@
     if (e.key === 'Escape') document.getElementById('messageInput').focus();
   });
 
+  // ============================================================
+  // CLAP DETECTION — Double tap to activate Friday
+  // ============================================================
+  
+  let audioContext = null;
+  let microphone = null;
+  let analyser = null;
+  let clapClips = [];
+  let isListening = false;
+  let isActivated = false;
+  const CLAP_THRESHOLD = 30;
+  const CLAP_COOLDOWN = 400;
+  const CLAP_WINDOW = 800;
+  const REQUIRED_CLAPS = 2;
+
+  async function initClapDetector() {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      microphone = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      microphone.connect(analyser);
+      isListening = true;
+      updateClapStatus('Listening for claps...', 'listening');
+      detectClaps();
+    } catch (err) {
+      updateClapStatus('Mic access denied', 'error');
+      console.log('Microphone access denied:', err);
+    }
+  }
+
+  function detectClaps() {
+    if (!isListening || !analyser) return;
+    
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyser.getByteFrequencyData(dataArray);
+    
+    const sum = dataArray.reduce((a, b) => a + b, 0);
+    const average = sum / bufferLength;
+    const now = Date.now();
+
+    if (average > CLAP_THRESHOLD) {
+      const lastClap = clapClips.length > 0 ? clapClips[clapClips.length - 1].time : 0;
+      
+      if (now - lastClap > CLAP_COOLDOWN) {
+        clapClips.push({ time: now });
+        
+        // Keep only claps within the window
+        clapClaps = clapClips.filter(c => now - c.time < CLAP_WINDOW);
+        
+        if (clapClips.length >= REQUIRED_CLAPS) {
+          clapClips = [];
+          activateFriday();
+        }
+      }
+    }
+    
+    requestAnimationFrame(detectClaps);
+  }
+
+  function activateFriday() {
+    if (isActivated) return;
+    isActivated = true;
+    
+    // Show activation animation
+    const container = document.getElementById('messagesContainer');
+    const activation = document.createElement('div');
+    activation.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,20,40,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 9999;
+      animation: fadeIn 0.3s ease;
+    `;
+    activation.innerHTML = `
+      <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 30px rgba(0,255,255,0.3); }
+          50% { box-shadow: 0 0 80px rgba(0,255,255,0.8); }
+        }
+        .clap-text {
+          font-family: 'Orbitron', sans-serif;
+          font-size: 2rem;
+          color: #0ff;
+          text-shadow: 0 0 30px rgba(0,255,255,0.8);
+          letter-spacing: 8px;
+          animation: fadeIn 0.5s ease;
+          margin-bottom: 30px;
+        }
+        .clap-rings {
+          width: 150px; height: 150px;
+          border-radius: 50%;
+          border: 3px solid #0ff;
+          display: flex; align-items: center; justify-content: center;
+          animation: pulseGlow 1.5s ease-in-out infinite;
+        }
+        .clap-rings-inner {
+          width: 60px; height: 60px;
+          border-radius: 50%;
+          background: radial-gradient(circle, #fff, #0ff);
+          box-shadow: 0 0 40px #0ff;
+        }
+      </style>
+      <div class="clap-text">FRIDAY ACTIVATED</div>
+      <div class="clap-rings">
+        <div class="clap-rings-inner"></div>
+      </div>
+    `;
+    document.body.appendChild(activation);
+    
+    // Remove overlay after 2 seconds
+    setTimeout(() => {
+      activation.style.animation = 'fadeIn 0.3s ease reverse';
+      setTimeout(() => {
+        if (activation.parentNode) activation.parentNode.removeChild(activation);
+      }, 300);
+      isActivated = false;
+      document.getElementById('messageInput').focus();
+    }, 2000);
+  }
+
+  function updateClapStatus(text, state) {
+    let statusEl = document.getElementById('clapStatus');
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.id = 'clapStatus';
+      statusEl.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0,30,60,0.9);
+        border: 1px solid rgba(0,170,255,0.3);
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        color: rgba(0,200,255,0.8);
+        font-family: 'Orbitron', monospace;
+        letter-spacing: 1px;
+        z-index: 100;
+      `;
+      document.body.appendChild(statusEl);
+    }
+    statusEl.textContent = text;
+    if (state === 'error') {
+      statusEl.style.borderColor = 'rgba(255,100,0,0.5)';
+      statusEl.style.color = 'rgba(255,150,100,0.8)';
+    } else if (state === 'listening') {
+      statusEl.style.borderColor = 'rgba(0,170,255,0.3)';
+      statusEl.style.color = 'rgba(0,200,255,0.8)';
+    }
+  }
+
+  // Start clap detection on page load
+  window.addEventListener('load', () => {
+    setTimeout(initClapDetector, 1000);
+  });
+
   // Init
   checkServer();
   setInterval(checkServer, 30000);
