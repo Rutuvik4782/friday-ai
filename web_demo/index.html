@@ -5,441 +5,834 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>F.R.I.D.A.Y. — Tony Stark AI</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
     :root {
-      --arc-blue: #0cf;
-      --arc-red: #f20;
-      --dark-bg: #0a0a0f;
-      --panel-bg: rgba(0, 20, 40, 0.7);
-      --border: rgba(0, 204, 255, 0.3);
+      --jarvis-blue: #0af;
+      --jarvis-cyan: #0ff;
+      --arc-blue: #00c8ff;
+      --arc-orange: #ff6b00;
+      --dark-bg: #0a0c10;
+      --panel-bg: rgba(0, 15, 30, 0.85);
+      --border-glow: rgba(0, 170, 255, 0.3);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: var(--dark-bg);
-      color: #cde;
+      color: #c8e8f0;
       font-family: 'Rajdhani', sans-serif;
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
     }
 
-    .arc-reactor {
-      width: 200px;
-      height: 200px;
-      margin: 20px auto;
-      border-radius: 50%;
-      background: radial-gradient(circle at 40% 40%,
-        #0ff 0%, #08f 20%, #04a 40%, transparent 70%);
-      box-shadow:
-        0 0 40px #0cf, 0 0 80px rgba(0,204,255,0.4),
-        inset 0 0 30px rgba(0,204,255,0.3);
-      animation: pulse 3s ease-in-out infinite;
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        linear-gradient(90deg, rgba(0,170,255,0.03) 1px, transparent 1px),
+        linear-gradient(rgba(0,170,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Scan line effect */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--jarvis-blue), transparent);
+      animation: scanline 4s linear infinite;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    @keyframes scanline {
+      0% { top: 0; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 100vh; opacity: 0; }
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(180deg, rgba(0,20,40,0.95), rgba(0,10,20,0.8));
+      border-bottom: 1px solid var(--border-glow);
+      padding: 15px 30px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 10;
+      backdrop-filter: blur(20px);
     }
 
-    .arc-reactor-inner {
-      width: 80px;
-      height: 80px;
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--jarvis-blue), transparent);
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* Arc Reactor */
+    .arc-reactor {
+      width: 60px;
+      height: 60px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .arc-ring {
+      position: absolute;
       border-radius: 50%;
-      background: radial-gradient(circle, #fff 0%, #0cf 60%, #08f 100%);
-      box-shadow: 0 0 20px #0cf;
+      border: 2px solid var(--arc-blue);
+      animation: arcPulse 3s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 40px #0cf, 0 0 80px rgba(0,204,255,0.4); }
-      50% { box-shadow: 0 0 60px #0cf, 0 0 120px rgba(0,204,255,0.6); }
+    .arc-ring:nth-child(1) { width: 100%; height: 100%; top: 0; left: 0; animation-delay: 0s; }
+    .arc-ring:nth-child(2) { width: 75%; height: 75%; top: 12.5%; left: 12.5%; animation-delay: 0.3s; border-color: var(--jarvis-cyan); }
+    .arc-ring:nth-child(3) { width: 50%; height: 50%; top: 25%; left: 25%; animation-delay: 0.6s; }
+    .arc-core {
+      position: absolute;
+      width: 20%; height: 20%;
+      top: 40%; left: 40%;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff, var(--jarvis-cyan));
+      box-shadow: 0 0 15px var(--jarvis-cyan), 0 0 30px rgba(0,255,255,0.5);
     }
 
-    header {
-      text-align: center;
-      padding: 10px;
+    @keyframes arcPulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.02); }
     }
 
-    h1 {
+    .logo-text h1 {
       font-family: 'Orbitron', sans-serif;
-      font-size: 2.5rem;
-      color: var(--arc-blue);
-      text-shadow: 0 0 20px rgba(0,204,255,0.5);
-      letter-spacing: 8px;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--jarvis-cyan);
+      text-shadow: 0 0 20px rgba(0,255,255,0.6), 0 0 40px rgba(0,255,255,0.3);
+      letter-spacing: 6px;
     }
 
-    .subtitle {
-      font-size: 0.9rem;
-      color: rgba(0,204,255,0.6);
-      letter-spacing: 4px;
-      margin-top: 5px;
+    .logo-text .subtitle {
+      font-size: 0.65rem;
+      color: rgba(0,170,255,0.6);
+      letter-spacing: 3px;
+      text-transform: uppercase;
     }
 
+    /* Status indicators */
     .status-bar {
       display: flex;
-      justify-content: center;
-      gap: 30px;
-      padding: 10px;
-      font-size: 0.8rem;
-      color: rgba(0,204,255,0.7);
+      gap: 25px;
+      align-items: center;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: rgba(0,200,255,0.7);
+      letter-spacing: 1px;
     }
 
     .status-dot {
-      display: inline-block;
       width: 8px; height: 8px;
       border-radius: 50%;
-      background: #0cf;
-      margin-right: 6px;
-      animation: blink 2s infinite;
+      background: #0f0;
+      box-shadow: 0 0 8px #0f0;
+      animation: statusBlink 2s ease-in-out infinite;
     }
 
-    .status-dot.error { background: var(--arc-red); }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .status-dot.error { background: var(--arc-orange); box-shadow: 0 0 8px var(--arc-orange); }
+    .status-dot.warning { background: #ff0; box-shadow: 0 0 8px #ff0; }
 
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      flex: 1;
-      width: 100%;
+    @keyframes statusBlink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    .server-url {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      color: rgba(0,170,255,0.5);
+      background: rgba(0,50,80,0.5);
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,170,255,0.2);
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .config-panel {
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 20px;
-      backdrop-filter: blur(10px);
-    }
-
-    .config-panel h3 {
-      font-family: 'Orbitron', sans-serif;
-      color: var(--arc-blue);
-      font-size: 0.8rem;
-      letter-spacing: 3px;
-      margin-bottom: 10px;
-    }
-
-    .config-row {
+    /* MAIN LAYOUT */
+    .main-layout {
       display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
     }
 
-    .config-row label {
-      font-size: 0.85rem;
-      color: #89a;
+    /* SIDEBAR */
+    .sidebar {
+      width: 220px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-glow);
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      gap: 10px;
+      backdrop-filter: blur(20px);
+    }
+
+    .sidebar-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6rem;
+      color: rgba(0,170,255,0.5);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0,170,255,0.1);
+      margin-bottom: 5px;
+    }
+
+    .tool-btn {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(0,30,60,0.6);
+      border: 1px solid rgba(0,170,255,0.15);
+      border-radius: 6px;
+      color: rgba(0,200,255,0.8);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
     }
 
-    .config-row select, .config-row input {
-      background: rgba(0,20,40,0.8);
-      border: 1px solid var(--border);
-      color: #cde;
-      padding: 4px 8px;
+    .tool-btn:hover {
+      background: rgba(0,80,150,0.4);
+      border-color: var(--jarvis-blue);
+      box-shadow: 0 0 15px rgba(0,170,255,0.2);
+      color: var(--jarvis-cyan);
+    }
+
+    .tool-btn .icon {
+      font-size: 1.1rem;
+      width: 24px;
+      text-align: center;
+    }
+
+    .tool-btn .shortcut {
+      margin-left: auto;
+      font-size: 0.6rem;
+      color: rgba(0,170,255,0.3);
+      background: rgba(0,50,80,0.5);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+
+    /* CHAT AREA */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Toolbar */
+    .chat-toolbar {
+      padding: 10px 20px;
+      background: rgba(0,15,30,0.6);
+      border-bottom: 1px solid rgba(0,170,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .model-select {
+      background: rgba(0,30,60,0.8);
+      border: 1px solid rgba(0,170,255,0.3);
+      color: var(--jarvis-cyan);
+      padding: 6px 12px;
       border-radius: 4px;
       font-family: 'Rajdhani', sans-serif;
+      font-size: 0.8rem;
+      cursor: pointer;
     }
 
-    .chat-window {
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      height: 400px;
+    .clear-btn {
+      background: rgba(255,80,0,0.1);
+      border: 1px solid rgba(255,80,0,0.3);
+      color: rgba(255,150,100,0.8);
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-left: auto;
+      transition: all 0.2s;
+    }
+
+    .clear-btn:hover {
+      background: rgba(255,80,0,0.2);
+      border-color: var(--arc-orange);
+    }
+
+    /* Messages */
+    .messages-container {
+      flex: 1;
       overflow-y: auto;
-      margin-bottom: 15px;
+      padding: 20px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .messages-container::-webkit-scrollbar { width: 4px; }
+    .messages-container::-webkit-scrollbar-track { background: transparent; }
+    .messages-container::-webkit-scrollbar-thumb { background: var(--jarvis-blue); border-radius: 2px; }
+
+    .message {
+      display: flex;
+      gap: 15px;
+      animation: msgFade 0.3s ease;
+      max-width: 85%;
+    }
+
+    @keyframes msgFade { from { opacity: 0; transform: translateY(10px); } }
+
+    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+    .message.friday { align-self: flex-start; }
+
+    .msg-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .message.friday .msg-avatar {
+      background: linear-gradient(135deg, rgba(0,100,200,0.3), rgba(0,170,255,0.2));
+      border: 1px solid rgba(0,170,255,0.4);
+      color: var(--jarvis-cyan);
+    }
+
+    .message.user .msg-avatar {
+      background: linear-gradient(135deg, rgba(200,80,0,0.3), rgba(255,100,0,0.2));
+      border: 1px solid rgba(255,100,0,0.4);
+      color: var(--arc-orange);
+    }
+
+    .msg-content {
+      background: rgba(0,20,40,0.6);
+      border: 1px solid rgba(0,170,255,0.15);
+      border-radius: 12px;
+      padding: 12px 16px;
+      line-height: 1.6;
+      font-size: 0.95rem;
       backdrop-filter: blur(10px);
     }
 
-    .chat-window::-webkit-scrollbar { width: 4px; }
-    .chat-window::-webkit-scrollbar-track { background: transparent; }
-    .chat-window::-webkit-scrollbar-thumb { background: var(--arc-blue); border-radius: 2px; }
-
-    .message {
-      margin-bottom: 15px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } }
-
-    .message.user {
-      text-align: right;
-    }
-
-    .message .bubble {
-      display: inline-block;
-      max-width: 80%;
-      padding: 10px 15px;
-      border-radius: 12px;
-      line-height: 1.5;
-      font-size: 0.95rem;
-    }
-
-    .message.friday .bubble {
-      background: rgba(0,204,255,0.1);
-      border: 1px solid rgba(0,204,255,0.3);
+    .message.friday .msg-content {
       border-radius: 12px 12px 12px 2px;
-      color: #def;
+      border-color: rgba(0,170,255,0.2);
     }
 
-    .message.user .bubble {
-      background: rgba(255,50,0,0.15);
-      border: 1px solid rgba(255,50,0,0.3);
+    .message.user .msg-content {
+      background: rgba(30,10,0,0.6);
+      border-color: rgba(255,100,0,0.2);
       border-radius: 12px 12px 2px 12px;
-      color: #fdc;
+      color: #f0d8c8;
     }
 
-    .message .label {
-      font-size: 0.7rem;
-      color: rgba(0,204,255,0.5);
-      letter-spacing: 2px;
-      margin-bottom: 3px;
-      display: block;
-    }
-
-    .message.user .label { text-align: right; }
-
-    .tool-badge {
+    .tool-used {
       display: inline-block;
-      font-size: 0.65rem;
-      background: rgba(0,204,255,0.2);
-      color: var(--arc-blue);
-      padding: 1px 6px;
+      font-size: 0.6rem;
+      background: rgba(0,170,255,0.1);
+      color: var(--jarvis-cyan);
+      padding: 2px 8px;
       border-radius: 3px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      font-family: 'Orbitron', monospace;
+      letter-spacing: 1px;
     }
 
-    .input-row {
-      display: flex;
+    /* Typing indicator */
+    .typing-indicator {
+      display: none;
+      align-items: center;
       gap: 10px;
+      padding: 10px 20px;
+      color: rgba(0,170,255,0.6);
+      font-size: 0.8rem;
     }
 
-    .input-row input {
+    .typing-indicator.active { display: flex; }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--jarvis-blue);
+      animation: typingDot 1.4s ease-in-out infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingDot { 0%,60%,100%{opacity:0.3;transform:scale(0.8)} 30%{opacity:1;transform:scale(1)} }
+
+    /* Voice waveform */
+    .voice-wave {
+      display: none;
+      align-items: center;
+      gap: 3px;
+      height: 30px;
+    }
+
+    .voice-wave.active { display: flex; }
+
+    .voice-wave span {
+      width: 3px;
+      border-radius: 2px;
+      background: var(--jarvis-cyan);
+      animation: waveBar 0.8s ease-in-out infinite;
+    }
+
+    .voice-wave span:nth-child(1) { animation-delay: 0s; }
+    .voice-wave span:nth-child(2) { animation-delay: 0.1s; }
+    .voice-wave span:nth-child(3) { animation-delay: 0.2s; }
+    .voice-wave span:nth-child(4) { animation-delay: 0.3s; }
+    .voice-wave span:nth-child(5) { animation-delay: 0.4s; }
+    .voice-wave span:nth-child(6) { animation-delay: 0.5s; }
+    .voice-wave span:nth-child(7) { animation-delay: 0.6s; }
+
+    @keyframes waveBar {
+      0%, 100% { height: 6px; }
+      50% { height: 24px; }
+    }
+
+    /* INPUT AREA */
+    .input-area {
+      padding: 15px 30px 20px;
+      background: linear-gradient(0deg, rgba(0,15,30,0.95), rgba(0,10,20,0.7));
+      border-top: 1px solid var(--border-glow);
+      backdrop-filter: blur(20px);
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .input-field {
       flex: 1;
-      background: rgba(0,20,40,0.8);
-      border: 1px solid var(--border);
-      color: #cde;
-      padding: 12px 16px;
-      border-radius: 25px;
+      background: rgba(0,30,60,0.6);
+      border: 1px solid rgba(0,170,255,0.3);
+      border-radius: 8px;
+      padding: 14px 18px;
+      color: #c8e8f0;
       font-family: 'Rajdhani', sans-serif;
       font-size: 1rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.2s;
     }
 
-    .input-row input:focus {
-      border-color: var(--arc-blue);
-      box-shadow: 0 0 15px rgba(0,204,255,0.2);
+    .input-field:focus {
+      border-color: var(--jarvis-blue);
+      box-shadow: 0 0 20px rgba(0,170,255,0.15), inset 0 0 20px rgba(0,50,100,0.1);
     }
 
-    .input-row button {
-      background: linear-gradient(135deg, #08f, #0cf);
+    .input-field::placeholder { color: rgba(0,150,200,0.4); }
+
+    .send-btn {
+      background: linear-gradient(135deg, #0066aa, #00aaff);
       border: none;
-      color: #000;
+      color: #fff;
       font-family: 'Orbitron', sans-serif;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
+      font-weight: 700;
       letter-spacing: 2px;
-      padding: 12px 24px;
-      border-radius: 25px;
+      padding: 14px 28px;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s;
-      font-weight: 700;
+      text-transform: uppercase;
     }
 
-    .input-row button:hover {
-      box-shadow: 0 0 20px rgba(0,204,255,0.6);
-      transform: scale(1.05);
+    .send-btn:hover {
+      box-shadow: 0 0 25px rgba(0,170,255,0.5);
+      transform: translateY(-1px);
     }
 
-    .input-row button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    .send-btn:active { transform: translateY(0); }
+
+    .voice-btn {
+      background: rgba(0,30,60,0.6);
+      border: 1px solid rgba(0,170,255,0.3);
+      color: var(--jarvis-cyan);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .typing-indicator {
-      display: none;
-      color: rgba(0,204,255,0.6);
-      font-size: 0.85rem;
-      padding: 10px;
+    .voice-btn:hover {
+      background: rgba(0,80,150,0.4);
+      border-color: var(--jarvis-blue);
     }
 
-    .typing-indicator.active { display: block; }
+    .voice-btn.recording {
+      background: rgba(255,50,0,0.2);
+      border-color: var(--arc-orange);
+      animation: recordingPulse 1s ease-in-out infinite;
+    }
 
-    .quick-actions {
+    @keyframes recordingPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,100,0,0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(255,100,0,0); }
+    }
+
+    /* Quick suggestions */
+    .quick-suggestions {
       display: flex;
       gap: 8px;
+      margin-top: 10px;
       flex-wrap: wrap;
-      margin-bottom: 15px;
     }
 
-    .quick-btn {
-      background: rgba(0,20,40,0.8);
-      border: 1px solid var(--border);
-      color: rgba(0,204,255,0.8);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 0.8rem;
-      padding: 6px 14px;
+    .suggestion-chip {
+      background: rgba(0,40,80,0.5);
+      border: 1px solid rgba(0,170,255,0.2);
+      color: rgba(0,180,220,0.7);
+      padding: 5px 12px;
       border-radius: 15px;
+      font-size: 0.75rem;
       cursor: pointer;
       transition: all 0.2s;
     }
 
-    .quick-btn:hover {
-      background: rgba(0,204,255,0.15);
-      border-color: var(--arc-blue);
-      color: var(--arc-blue);
+    .suggestion-chip:hover {
+      background: rgba(0,80,150,0.4);
+      border-color: var(--jarvis-blue);
+      color: var(--jarvis-cyan);
     }
 
-    footer {
+    /* System notification */
+    .system-msg {
       text-align: center;
-      padding: 15px;
-      font-size: 0.75rem;
-      color: rgba(0,204,255,0.4);
+      font-size: 0.7rem;
+      color: rgba(0,150,200,0.4);
+      padding: 8px;
       letter-spacing: 2px;
+    }
+
+    /* Glowing border effect */
+    .glow-border {
+      position: relative;
+    }
+
+    .glow-border::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; right: -1px; bottom: -1px;
+      border-radius: inherit;
+      background: linear-gradient(45deg, var(--jarvis-blue), transparent, var(--jarvis-cyan));
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .glow-border:hover::before { opacity: 0.5; }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .status-bar { display: none; }
+      .logo-text h1 { font-size: 1.2rem; }
+      .messages-container { padding: 15px; }
     }
   </style>
 </head>
 <body>
 
-  <header>
+<header>
+  <div class="logo-area">
     <div class="arc-reactor">
-      <div class="arc-reactor-inner"></div>
+      <div class="arc-ring"></div>
+      <div class="arc-ring"></div>
+      <div class="arc-ring"></div>
+      <div class="arc-core"></div>
     </div>
-    <h1>F.R.I.D.A.Y.</h1>
-    <div class="subtitle">FULLY RESPONSIVE INTELLIGENT DIGITAL ASSISTANT FOR YOU</div>
-  </header>
-
-  <div class="status-bar">
-    <span><span class="status-dot" id="serverDot"></span>MCP Server</span>
-    <span><span class="status-dot" id="wsDot"></span>WebSocket</span>
-    <span id="modelStatus">LLM: groq (free)</span>
+    <div class="logo-text">
+      <h1>F.R.I.D.A.Y.</h1>
+      <div class="subtitle">Fully Responsive Intelligent Digital Assistant for You</div>
+    </div>
   </div>
 
-  <div class="container">
-    <div class="config-panel">
-      <h3>⚙ CONFIGURATION</h3>
-      <div class="config-row">
-        <label>LLM <select id="llmSelect">
-          <option value="groq">Groq (FREE ✓)</option>
-          <option value="gemini">Gemini (free tier)</option>
-          <option value="openai">OpenAI (paid)</option>
-        </select></label>
-        <label>TTS <select id="ttsSelect">
-          <option value="gtts">gTTS (FREE ✓)</option>
-          <option value="sarvam">Sarvam (paid)</option>
-          <option value="openai">OpenAI (paid)</option>
-        </select></label>
-        <label>Server <input type="text" id="serverInput" value="http://127.0.0.1:8000" style="width:200px;"></label>
-        <button onclick="checkServer()" style="padding:4px 12px; border-radius:4px; background:rgba(0,204,255,0.1); border:1px solid var(--border); color:var(--arc-blue); cursor:pointer; font-family:'Rajdhani'; font-size:0.8rem;">Test</button>
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="status-dot" id="serverDot"></span>
+      <span>Server</span>
+    </div>
+    <div class="status-item">
+      <span class="status-dot" id="llmDot"></span>
+      <span id="llmStatus">Groq (free)</span>
+    </div>
+    <div class="status-item">
+      <span class="status-dot" id="connDot"></span>
+      <span>Connected</span>
+    </div>
+    <div class="server-url" id="serverUrl">https://friday-ai-2hbv.onrender.com</div>
+  </div>
+</header>
+
+<div class="main-layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-title">⚡ Tools</div>
+    <button class="tool-btn" onclick="ask('What is the latest world news?')">
+      <span class="icon">🌐</span>
+      World News
+      <span class="shortcut">N</span>
+    </button>
+    <button class="tool-btn" onclick="ask('What is the weather in Mumbai?')">
+      <span class="icon">🌤</span>
+      Weather
+      <span class="shortcut">W</span>
+    </button>
+    <button class="tool-btn" onclick="ask('Detect sarcasm in: Oh wonderful, another meeting at 5am')">
+      <span class="icon">😏</span>
+      Sarcasm Check
+      <span class="shortcut">S</span>
+    </button>
+    <button class="tool-btn" onclick="ask('Search for: best free AI tools 2025')">
+      <span class="icon">🔍</span>
+      Web Search
+      <span class="shortcut">F</span>
+    </button>
+    <button class="tool-btn" onclick="ask('Run this Python code:\nprint([x**2 for x in range(1, 11)])')">
+      <span class="icon">🐍</span>
+      Run Python
+      <span class="shortcut">P</span>
+    </button>
+    <button class="tool-btn" onclick="ask('File a support ticket: title=Bug in login, description=Users cannot login with SSO')">
+      <span class="icon">🎫</span>
+      New Ticket
+      <span class="shortcut">T</span>
+    </button>
+
+    <div class="sidebar-title" style="margin-top:20px;">💡 Quick Ask</div>
+    <button class="tool-btn" onclick="ask('Explain quantum computing in simple terms')">
+      <span class="icon">❓</span>
+      Explain Topic
+    </button>
+    <button class="tool-btn" onclick="ask('Write a Python function to check prime numbers')">
+      <span class="icon">📝</span>
+      Write Code
+    </button>
+    <button class="tool-btn" onclick="ask('Summarize this: Artificial intelligence is transforming every industry...')">
+      <span class="icon">📄</span>
+      Summarize
+    </button>
+  </div>
+
+  <!-- Chat Area -->
+  <div class="chat-area">
+    <div class="chat-toolbar">
+      <select class="model-select" id="modelSelect">
+        <option value="groq">Groq (Free ✓)</option>
+        <option value="gemini">Gemini (Free tier)</option>
+      </select>
+      <div class="voice-wave" id="voiceWave">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
+      <button class="clear-btn" onclick="clearChat()">🗑 Clear Chat</button>
     </div>
 
-    <div class="chat-window" id="chatWindow">
+    <div class="messages-container" id="messagesContainer">
+      <div class="system-msg">━━━ SYSTEM ONLINE — F.R.I.D.A.Y. OPERATIONAL ━━━</div>
       <div class="message friday">
-        <span class="label">F.R.I.D.A.Y.</span>
-        <div class="bubble">System online, boss. All protocols nominal. What can I do for you today?</div>
+        <div class="msg-avatar">FRD</div>
+        <div class="msg-content">
+          System online, boss. All protocols nominal. <br><br>
+          I'm F.R.I.D.A.Y. — Tony Stark's AI assistant, ready to serve. I can get you world news, check weather, search the web, detect sarcasm, run code, and more.<br><br>
+          What can I do for you today?
+        </div>
       </div>
     </div>
 
     <div class="typing-indicator" id="typingIndicator">
-      F.R.I.D.A.Y. is thinking...
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+      <span>F.R.I.D.A.Y. is thinking...</span>
     </div>
 
-    <div class="quick-actions">
-      <button class="quick-btn" onclick="sendMessage('What is the latest news today?')">📰 World News</button>
-      <button class="quick-btn" onclick="sendMessage('What is the weather in London?')">🌤 Weather</button>
-      <button class="quick-btn" onclick="sendMessage('Detect sarcasm in: Oh wonderful, another meeting at 5am')">😏 Sarcasm Check</button>
-      <button class="quick-btn" onclick="sendMessage('Search for: best free AI tools 2025')">🔍 Web Search</button>
-      <button class="quick-btn" onclick="sendMessage('Run this Python: print([x**2 for x in range(8)])')">🐍 Run Code</button>
-      <button class="quick-btn" onclick="sendMessage('File a support ticket: title=Bug in login, description=Users cannot login with SSO, priority=high')">🎫 New Ticket</button>
-    </div>
-
-    <div class="input-row">
-      <input type="text" id="messageInput" placeholder="Talk to F.R.I.D.A.Y..." 
-             onkeydown="if(event.key==='Enter')sendMessage()" autofocus>
-      <button id="sendBtn" onclick="sendMessage()">SEND</button>
+    <div class="input-area">
+      <div class="input-wrapper">
+        <input type="text" class="input-field" id="messageInput" 
+               placeholder="Talk to F.R.I.D.A.Y. — Type your command..." 
+               onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="voice-btn" id="voiceBtn" title="Voice (coming soon)">🎙</button>
+        <button class="send-btn" onclick="sendMessage()">SEND</button>
+      </div>
+      <div class="quick-suggestions">
+        <span class="suggestion-chip" onclick="ask('What is happening in the world today?')">🌐 World News</span>
+        <span class="suggestion-chip" onclick="ask('Weather in London')">🌤 Weather</span>
+        <span class="suggestion-chip" onclick="ask('Detect sarcasm: Oh great, another Monday')">😏 Sarcasm</span>
+        <span class="suggestion-chip" onclick="ask('Search: top AI news today')">🔍 Search</span>
+        <span class="suggestion-chip" onclick="ask('Run: print(sum(range(1,101)))')">🐍 Run Code</span>
+        <span class="suggestion-chip" onclick="ask('Hello Friday, introduce yourself')">👋 Greet</span>
+      </div>
     </div>
   </div>
+</div>
 
-  <footer>F.R.I.D.A.Y. AI SYSTEM — STARK INDUSTRIES // Built with FastMCP + LiveKit</footer>
+<script>
+  const SERVER_URL = 'https://friday-ai-2hbv.onrender.com';
+  let conversationHistory = [];
 
-  <script>
-    const MCP_SERVER = document.getElementById('serverInput').value;
-    const chatWindow = document.getElementById('chatWindow');
-    const typingIndicator = document.getElementById('typingIndicator');
-    let conversationHistory = [];
-
-    async function checkServer() {
-      const url = document.getElementById('serverInput').value;
-      const dot = document.getElementById('serverDot');
-      try {
-        const r = await fetch(url + '/health');
-        dot.classList.remove('error');
-      } catch {
-        dot.classList.add('error');
+  async function checkServer() {
+    const dots = {
+      server: document.getElementById('serverDot'),
+      llm: document.getElementById('llmDot'),
+      conn: document.getElementById('connDot'),
+    };
+    try {
+      const r = await fetch(SERVER_URL + '/health');
+      if (r.ok) {
+        dots.server.classList.remove('error');
+        dots.conn.classList.remove('error');
       }
+    } catch {
+      dots.server.classList.add('error');
+      dots.conn.classList.add('error');
     }
+  }
 
-    async function sendMessage(text) {
-      const input = document.getElementById('messageInput');
-      const msg = text || input.value.trim();
-      if (!msg) return;
+  async function sendMessage(presetText) {
+    const input = document.getElementById('messageInput');
+    const text = presetText || input.value.trim();
+    if (!text) return;
+    input.value = '';
 
-      input.value = '';
-      addMessage(msg, 'user');
-      conversationHistory.push({ role: 'user', content: msg });
+    addMessage(text, 'user');
+    conversationHistory.push({ role: 'user', content: text });
 
-      showTyping(true);
+    showTyping(true);
 
-      try {
-        const response = await fetch(MCP_SERVER + '/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            messages: conversationHistory,
-            llm: document.getElementById('llmSelect').value,
-            tts: document.getElementById('ttsSelect').value,
-          }),
-        });
+    try {
+      const response = await fetch(SERVER_URL + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: conversationHistory.slice(-12),
+          llm: document.getElementById('modelSelect').value,
+          tts: 'gtts',
+        }),
+      });
 
-        const data = await response.json();
-        const reply = data.reply || "Processing complete, boss. All systems nominal.";
+      if (!response.ok) throw new Error('API error');
 
-        addMessage(reply, 'friday');
-        conversationHistory.push({ role: 'assistant', content: reply });
-      } catch (err) {
-        addMessage("Connection to Friday's brain is disrupted. Check the MCP server status.", 'friday');
-      } finally {
-        showTyping(false);
-      }
+      const data = await response.json();
+      const reply = data.reply || "Processing complete, boss.";
+
+      addMessage(reply, 'friday');
+      conversationHistory.push({ role: 'assistant', content: reply });
+    } catch (err) {
+      addMessage("Connection to Friday's neural network disrupted. Check server status, boss.", 'friday');
+    } finally {
+      showTyping(false);
     }
+  }
 
-    function addMessage(text, sender) {
-      const div = document.createElement('div');
-      div.className = `message ${sender}`;
-      div.innerHTML = `<span class="label">${sender === 'friday' ? 'F.R.I.D.A.Y.' : 'YOU'}</span>
-        <div class="bubble">${escapeHtml(text)}</div>`;
-      chatWindow.appendChild(div);
-      chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
+  function ask(text) {
+    sendMessage(text);
+  }
 
-    function showTyping(show) {
-      typingIndicator.classList.toggle('active', show);
-      document.getElementById('sendBtn').disabled = show;
-    }
+  function addMessage(text, sender) {
+    const container = document.getElementById('messagesContainer');
+    const div = document.createElement('div');
+    div.className = `message ${sender}`;
+    div.innerHTML = `
+      <div class="msg-avatar">${sender === 'friday' ? 'FRD' : 'YOU'}</div>
+      <div class="msg-content">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+  function showTyping(show) {
+    const indicator = document.getElementById('typingIndicator');
+    const sendBtn = document.querySelector('.send-btn');
+    indicator.classList.toggle('active', show);
+    sendBtn.disabled = show;
+  }
 
-    checkServer();
-    setInterval(checkServer, 30000);
-  </script>
+  function clearChat() {
+    conversationHistory = [];
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = `
+      <div class="system-msg">━━━ CHAT CLEARED — ALL PROTOCOLS NOMINAL ━━━</div>
+      <div class="message friday">
+        <div class="msg-avatar">FRD</div>
+        <div class="msg-content">Chat cleared, boss. Ready for new orders. What's next?</div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'n' && !e.ctrlKey && document.activeElement.tagName !== 'INPUT') ask('What is the latest world news?');
+    if (e.key === 'w' && !e.ctrlKey && document.activeElement.tagName !== 'INPUT') ask('What is the weather?');
+    if (e.key === 's' && !e.ctrlKey && document.activeElement.tagName !== 'INPUT') ask('Detect sarcasm in: Oh wonderful');
+    if (e.key === 'Escape') document.getElementById('messageInput').focus();
+  });
+
+  // Init
+  checkServer();
+  setInterval(checkServer, 30000);
+  document.getElementById('messageInput').focus();
+</script>
+
 </body>
 </html>
