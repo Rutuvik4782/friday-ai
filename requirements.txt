@@ -9,3 +9,4 @@ pydub
 groq>=1.1.2
 starlette>=1.0.0
 uvicorn
+gunicorn

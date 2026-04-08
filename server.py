@@ -225,6 +225,8 @@ starlette_app = Starlette(
     ],
 )
 
+app = starlette_app
+
 
 def main():
     print("=" * 60)
