@@ -33,14 +33,21 @@ def clear():
     os.system("clear")
 
 
-def speak(text, voice="Alex"):
-    """Use macOS say command for voice."""
+def speak(text, voice="Victoria"):
+    """Use macOS say command for voice. Victoria sounds like F.R.I.D.A.Y."""
     try:
         subprocess.run(
-            ["say", "-v", voice, "-r", "160", text], capture_output=True, timeout=10
+            ["say", "-v", voice, "-r", "165", text], capture_output=True, timeout=10
         )
     except Exception:
-        print(f"  [TTS] {text}")
+        try:
+            subprocess.run(
+                ["say", "-v", "Alex", "-r", "165", text],
+                capture_output=True,
+                timeout=10,
+            )
+        except Exception:
+            print(f"  [TTS] {text}")
 
 
 def type_text(text, delay=0.03, color=CYAN):
