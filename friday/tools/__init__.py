@@ -1,0 +1,15 @@
+"""
+Tool registry — imports and registers all tool modules with the MCP server.
+"""
+
+from friday.tools import web, system, utils, tickets, execution, sarcasm
+
+
+def register_all_tools(mcp):
+    """Register all tool groups onto the MCP server instance."""
+    web.register(mcp)
+    system.register(mcp)
+    utils.register(mcp)
+    tickets.register(mcp)
+    execution.register(mcp)
+    sarcasm.register(mcp)

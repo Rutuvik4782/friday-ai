@@ -1,0 +1,39 @@
+# =============================================================================
+# Cloudflare Workers Deployment for F.R.I.D.A.Y. MCP Server
+# =============================================================================
+#
+# OPTION 1 — Cloudflare Workers (recommended for MCP server)
+#   1. Install: npm install -g wrangler
+#   2. Login:  npx wrangler login
+#   3. Deploy: npx wrangler deploy
+#
+# OPTION 2 — Cloudflare Pages (for the web demo UI)
+#   1. Go to dash.cloudflare.com → Pages → Create project
+#   2. Connect GitHub repo, set build command: ./deploy.sh
+#   3. Add env vars in Pages settings
+#
+# After deploying the Worker, set MCP_SERVER_URL=https://your-worker.xxx.workers.dev
+# in your .env for the voice agent.
+# =============================================================================
+
+name = "friday-mcp-server"
+main = "worker.mcp.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+
+# =============================================================================
+# SECRETS (set via: npx wrangler secret put NAME)
+# Run: npx wrangler secret put GOOGLE_API_KEY
+#      npx wrangler secret put GROQ_API_KEY
+#      npx wrangler secret put SARVAM_API_KEY
+#      npx wrangler secret put OPENAI_API_KEY
+# =============================================================================
+
+[observability]
+enabled = true
+
+# Memory and CPU limits
+[workers]
+max_memory = 256

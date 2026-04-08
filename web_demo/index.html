@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F.R.I.D.A.Y. — Tony Stark AI</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;400;600&display=swap');
+
+    :root {
+      --arc-blue: #0cf;
+      --arc-red: #f20;
+      --dark-bg: #0a0a0f;
+      --panel-bg: rgba(0, 20, 40, 0.7);
+      --border: rgba(0, 204, 255, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--dark-bg);
+      color: #cde;
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .arc-reactor {
+      width: 200px;
+      height: 200px;
+      margin: 20px auto;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%,
+        #0ff 0%, #08f 20%, #04a 40%, transparent 70%);
+      box-shadow:
+        0 0 40px #0cf, 0 0 80px rgba(0,204,255,0.4),
+        inset 0 0 30px rgba(0,204,255,0.3);
+      animation: pulse 3s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arc-reactor-inner {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, #0cf 60%, #08f 100%);
+      box-shadow: 0 0 20px #0cf;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 40px #0cf, 0 0 80px rgba(0,204,255,0.4); }
+      50% { box-shadow: 0 0 60px #0cf, 0 0 120px rgba(0,204,255,0.6); }
+    }
+
+    header {
+      text-align: center;
+      padding: 10px;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.5rem;
+      color: var(--arc-blue);
+      text-shadow: 0 0 20px rgba(0,204,255,0.5);
+      letter-spacing: 8px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: rgba(0,204,255,0.6);
+      letter-spacing: 4px;
+      margin-top: 5px;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      padding: 10px;
+      font-size: 0.8rem;
+      color: rgba(0,204,255,0.7);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #0cf;
+      margin-right: 6px;
+      animation: blink 2s infinite;
+    }
+
+    .status-dot.error { background: var(--arc-red); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      flex: 1;
+      width: 100%;
+    }
+
+    .config-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .config-panel h3 {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--arc-blue);
+      font-size: 0.8rem;
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+    }
+
+    .config-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .config-row label {
+      font-size: 0.85rem;
+      color: #89a;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .config-row select, .config-row input {
+      background: rgba(0,20,40,0.8);
+      border: 1px solid var(--border);
+      color: #cde;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .chat-window {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      height: 400px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+      backdrop-filter: blur(10px);
+    }
+
+    .chat-window::-webkit-scrollbar { width: 4px; }
+    .chat-window::-webkit-scrollbar-track { background: transparent; }
+    .chat-window::-webkit-scrollbar-thumb { background: var(--arc-blue); border-radius: 2px; }
+
+    .message {
+      margin-bottom: 15px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } }
+
+    .message.user {
+      text-align: right;
+    }
+
+    .message .bubble {
+      display: inline-block;
+      max-width: 80%;
+      padding: 10px 15px;
+      border-radius: 12px;
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
+
+    .message.friday .bubble {
+      background: rgba(0,204,255,0.1);
+      border: 1px solid rgba(0,204,255,0.3);
+      border-radius: 12px 12px 12px 2px;
+      color: #def;
+    }
+
+    .message.user .bubble {
+      background: rgba(255,50,0,0.15);
+      border: 1px solid rgba(255,50,0,0.3);
+      border-radius: 12px 12px 2px 12px;
+      color: #fdc;
+    }
+
+    .message .label {
+      font-size: 0.7rem;
+      color: rgba(0,204,255,0.5);
+      letter-spacing: 2px;
+      margin-bottom: 3px;
+      display: block;
+    }
+
+    .message.user .label { text-align: right; }
+
+    .tool-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      background: rgba(0,204,255,0.2);
+      color: var(--arc-blue);
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .input-row input {
+      flex: 1;
+      background: rgba(0,20,40,0.8);
+      border: 1px solid var(--border);
+      color: #cde;
+      padding: 12px 16px;
+      border-radius: 25px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-row input:focus {
+      border-color: var(--arc-blue);
+      box-shadow: 0 0 15px rgba(0,204,255,0.2);
+    }
+
+    .input-row button {
+      background: linear-gradient(135deg, #08f, #0cf);
+      border: none;
+      color: #000;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 700;
+    }
+
+    .input-row button:hover {
+      box-shadow: 0 0 20px rgba(0,204,255,0.6);
+      transform: scale(1.05);
+    }
+
+    .input-row button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .typing-indicator {
+      display: none;
+      color: rgba(0,204,255,0.6);
+      font-size: 0.85rem;
+      padding: 10px;
+    }
+
+    .typing-indicator.active { display: block; }
+
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .quick-btn {
+      background: rgba(0,20,40,0.8);
+      border: 1px solid var(--border);
+      color: rgba(0,204,255,0.8);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .quick-btn:hover {
+      background: rgba(0,204,255,0.15);
+      border-color: var(--arc-blue);
+      color: var(--arc-blue);
+    }
+
+    footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 0.75rem;
+      color: rgba(0,204,255,0.4);
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="arc-reactor">
+      <div class="arc-reactor-inner"></div>
+    </div>
+    <h1>F.R.I.D.A.Y.</h1>
+    <div class="subtitle">FULLY RESPONSIVE INTELLIGENT DIGITAL ASSISTANT FOR YOU</div>
+  </header>
+
+  <div class="status-bar">
+    <span><span class="status-dot" id="serverDot"></span>MCP Server</span>
+    <span><span class="status-dot" id="wsDot"></span>WebSocket</span>
+    <span id="modelStatus">LLM: groq (free)</span>
+  </div>
+
+  <div class="container">
+    <div class="config-panel">
+      <h3>⚙ CONFIGURATION</h3>
+      <div class="config-row">
+        <label>LLM <select id="llmSelect">
+          <option value="groq">Groq (FREE ✓)</option>
+          <option value="gemini">Gemini (free tier)</option>
+          <option value="openai">OpenAI (paid)</option>
+        </select></label>
+        <label>TTS <select id="ttsSelect">
+          <option value="gtts">gTTS (FREE ✓)</option>
+          <option value="sarvam">Sarvam (paid)</option>
+          <option value="openai">OpenAI (paid)</option>
+        </select></label>
+        <label>Server <input type="text" id="serverInput" value="http://127.0.0.1:8000" style="width:200px;"></label>
+        <button onclick="checkServer()" style="padding:4px 12px; border-radius:4px; background:rgba(0,204,255,0.1); border:1px solid var(--border); color:var(--arc-blue); cursor:pointer; font-family:'Rajdhani'; font-size:0.8rem;">Test</button>
+      </div>
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+      <div class="message friday">
+        <span class="label">F.R.I.D.A.Y.</span>
+        <div class="bubble">System online, boss. All protocols nominal. What can I do for you today?</div>
+      </div>
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">
+      F.R.I.D.A.Y. is thinking...
+    </div>
+
+    <div class="quick-actions">
+      <button class="quick-btn" onclick="sendMessage('What is the latest news today?')">📰 World News</button>
+      <button class="quick-btn" onclick="sendMessage('What is the weather in London?')">🌤 Weather</button>
+      <button class="quick-btn" onclick="sendMessage('Detect sarcasm in: Oh wonderful, another meeting at 5am')">😏 Sarcasm Check</button>
+      <button class="quick-btn" onclick="sendMessage('Search for: best free AI tools 2025')">🔍 Web Search</button>
+      <button class="quick-btn" onclick="sendMessage('Run this Python: print([x**2 for x in range(8)])')">🐍 Run Code</button>
+      <button class="quick-btn" onclick="sendMessage('File a support ticket: title=Bug in login, description=Users cannot login with SSO, priority=high')">🎫 New Ticket</button>
+    </div>
+
+    <div class="input-row">
+      <input type="text" id="messageInput" placeholder="Talk to F.R.I.D.A.Y..." 
+             onkeydown="if(event.key==='Enter')sendMessage()" autofocus>
+      <button id="sendBtn" onclick="sendMessage()">SEND</button>
+    </div>
+  </div>
+
+  <footer>F.R.I.D.A.Y. AI SYSTEM — STARK INDUSTRIES // Built with FastMCP + LiveKit</footer>
+
+  <script>
+    const MCP_SERVER = document.getElementById('serverInput').value;
+    const chatWindow = document.getElementById('chatWindow');
+    const typingIndicator = document.getElementById('typingIndicator');
+    let conversationHistory = [];
+
+    async function checkServer() {
+      const url = document.getElementById('serverInput').value;
+      const dot = document.getElementById('serverDot');
+      try {
+        const r = await fetch(url + '/health');
+        dot.classList.remove('error');
+      } catch {
+        dot.classList.add('error');
+      }
+    }
+
+    async function sendMessage(text) {
+      const input = document.getElementById('messageInput');
+      const msg = text || input.value.trim();
+      if (!msg) return;
+
+      input.value = '';
+      addMessage(msg, 'user');
+      conversationHistory.push({ role: 'user', content: msg });
+
+      showTyping(true);
+
+      try {
+        const response = await fetch(MCP_SERVER + '/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            messages: conversationHistory,
+            llm: document.getElementById('llmSelect').value,
+            tts: document.getElementById('ttsSelect').value,
+          }),
+        });
+
+        const data = await response.json();
+        const reply = data.reply || "Processing complete, boss. All systems nominal.";
+
+        addMessage(reply, 'friday');
+        conversationHistory.push({ role: 'assistant', content: reply });
+      } catch (err) {
+        addMessage("Connection to Friday's brain is disrupted. Check the MCP server status.", 'friday');
+      } finally {
+        showTyping(false);
+      }
+    }
+
+    function addMessage(text, sender) {
+      const div = document.createElement('div');
+      div.className = `message ${sender}`;
+      div.innerHTML = `<span class="label">${sender === 'friday' ? 'F.R.I.D.A.Y.' : 'YOU'}</span>
+        <div class="bubble">${escapeHtml(text)}</div>`;
+      chatWindow.appendChild(div);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function showTyping(show) {
+      typingIndicator.classList.toggle('active', show);
+      document.getElementById('sendBtn').disabled = show;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    checkServer();
+    setInterval(checkServer, 30000);
+  </script>
+</body>
+</html>
