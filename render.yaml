@@ -1,5 +1,4 @@
 # render.yaml — F.R.I.D.A.Y. Auto-Deploy
-# Docs: https://render.com/docs/yaml
 
 services:
   - type: web
@@ -7,8 +6,8 @@ services:
     env: python
     region: singapore
     plan: free
-    buildCommand: uv sync --frozen && uv build
-    startCommand: uv run python server.py
+    buildCommand: pip install -e .
+    startCommand: python server.py
     healthCheckPath: /health
     envVars:
       - key: GROQ_API_KEY
