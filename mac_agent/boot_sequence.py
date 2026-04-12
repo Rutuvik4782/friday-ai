@@ -15,7 +15,7 @@ import json
 import urllib.request
 
 # Config
-YOUR_NAME = "boss"
+YOUR_NAME = "Rutz"
 FRIDAY_URL = "https://friday-ai-2hbv.onrender.com"
 LOCATION = "Pune"
 

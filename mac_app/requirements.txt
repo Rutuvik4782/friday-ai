@@ -1,0 +1,6 @@
+# F.R.I.D.A.Y. macOS App Dependencies
+# Run: pip3 install -r requirements.txt
+
+PyQt6>=6.4.0
+requests>=2.28.0
+pyttsx3>=2.90
