@@ -341,7 +341,7 @@ class SystemController:
 
 
 # =============================================================================
-# WAKE WORD LISTENER — Clap detection + wake word detection
+# WAKE WORD LISTENER — Simple version (activation via button)
 # =============================================================================
 
 class WakeWordListener(QObject):
@@ -351,142 +351,15 @@ class WakeWordListener(QObject):
     def __init__(self):
         super().__init__()
         self.running = False
-        self._thread = None
-        self._audio_available = self._check_audio()
-
-    def _check_audio(self):
-        try:
-            import sounddevice as sd
-            sd.check_input_settings()
-            return True
-        except Exception:
-            pass
-        try:
-            import pyaudio
-            p = pyaudio.PyAudio()
-            p.terminate()
-            return True
-        except Exception:
-            pass
-        return False
 
     def start(self):
         if self.running:
             return
         self.running = True
-        self._thread = threading.Thread(target=self._listen_loop, daemon=True)
-        self._thread.start()
         self.status.emit("active")
 
     def stop(self):
         self.running = False
-
-    def _listen_loop(self):
-        try:
-            import sounddevice as sd
-            self._listen_sounddevice()
-        except ImportError:
-            try:
-                self._listen_pyaudio()
-            except ImportError:
-                self._listen_swift_loop()
-
-    def _listen_sounddevice(self):
-        import sounddevice as sd
-        import numpy as np
-
-        clap_times = []
-        wake_word_times = []
-
-        def callback(indata, frames, time_info, status):
-            nonlocal clap_times, wake_word_times
-            if status:
-                return
-            audio_data = np.abs(indata[:, 0])
-            rms = np.sqrt(np.mean(audio_data ** 2))
-            amplitude = rms * 100
-
-            now = time.time()
-
-            if amplitude > 30:
-                if not clap_times or (now - clap_times[-1]) > 0.3:
-                    clap_times.append(now)
-
-                if len(clap_times) >= 2:
-                    if clap_times[-1] - clap_times[-2] < 1.5:
-                        if self.running:
-                            self.triggered.emit()
-                            time.sleep(2)
-
-                clap_times = [t for t in clap_times if now - t < 2]
-
-        try:
-            with sd.InputStream(
-                channels=1, samplerate=16000, blocksize=1024,
-                callback=callback, dtype='float32'
-            ):
-                while self.running:
-                    time.sleep(0.1)
-        except Exception:
-            pass
-
-    def _listen_pyaudio(self):
-        import pyaudio
-        import numpy as np
-
-        p = pyaudio.PyAudio()
-        stream = p.open(format=pyaudio.paFloat32, channels=1,
-                        rate=16000, input=True, frames_per_buffer=1024)
-        clap_times = []
-        now = time.time()
-
-        try:
-            while self.running:
-                data = np.frombuffer(stream.read(1024), dtype=np.float32)
-                rms = np.sqrt(np.mean(data ** 2))
-                amplitude = rms * 100
-
-                if amplitude > 30:
-                    if not clap_times or (time.time() - clap_times[-1]) > 0.3:
-                        clap_times.append(time.time())
-
-                    if len(clap_times) >= 2:
-                        if clap_times[-1] - clap_times[-2] < 1.5:
-                            if self.running:
-                                self.triggered.emit()
-                                time.sleep(2)
-                    clap_times = [t for t in clap_times if time.time() - t < 2]
-
-                time.sleep(0.01)
-        except Exception:
-            pass
-        finally:
-            stream.stop_stream()
-            stream.close()
-            p.terminate()
-
-    def _listen_swift_loop(self):
-        import subprocess, os
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        swift_path = os.path.join(script_dir, "voice_helper.swift")
-
-        while self.running:
-            try:
-                proc = subprocess.Popen(
-                    ["swift", swift_path],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-                )
-                out, _ = proc.communicate(timeout=8)
-                for line in out.split("\n"):
-                    if line.startswith("TEXT:"):
-                        text = line[5:].lower().strip()
-                        if any(w in text for w in ["wakeup buddy", "hey buddy", "hey friday", "wake up buddy"]):
-                            if self.running:
-                                self.triggered.emit()
-                                time.sleep(2)
-            except Exception:
-                pass
-            time.sleep(0.5)
 
 
 class ArcReactorWidget(QWidget):
