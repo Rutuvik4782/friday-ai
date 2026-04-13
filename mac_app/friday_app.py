@@ -16,7 +16,7 @@ from PyQt6.QtCore import (
     Qt, QTimer, QPointF, QObject, pyqtSignal
 )
 from PyQt6.QtGui import (
-    QFont, QColor, QPalette, QBrush, QPen, QPolygonF, QPainter, QPainterPath, QRadialGradient
+    QFont, QColor, QPalette, QBrush, QPen, QPolygonF, QPainter, QPainterPath, QRadialGradient, QLinearGradient
 )
 
 FRIDAY_SERVER = "https://friday-ai-2hbv.onrender.com"
