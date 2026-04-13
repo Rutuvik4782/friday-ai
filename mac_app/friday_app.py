@@ -4,7 +4,7 @@ F.R.I.D.A.Y. — Advanced JARVIS-Style macOS AI Assistant
 With natural voice, system control, and intelligent automation.
 """
 
-import sys, os, json, time, threading, datetime, math, subprocess, tempfile
+import sys, os, json, time, threading, datetime, math, random, subprocess, tempfile
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
