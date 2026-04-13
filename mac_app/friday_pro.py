@@ -643,6 +643,9 @@ class SystemController:
     def __init__(self):
         self.memory = MemoryDatabase()
         self.last_screenshot = None
+        self.vision = VisionModule()
+        self.document_ai = DocumentAI()
+        self.image_gen = ImageGenerator()
     
     def execute(self, command: str) -> str:
         command = command.lower().strip()
@@ -724,6 +727,26 @@ class SystemController:
         # Math & Calc
         elif any(k in command for k in ["calculate", "compute", "what is", "solve"]):
             return self._calculate(command)
+        
+        # Vision & Screen
+        elif "what's on my screen" in command or "describe screen" in command or "see screen" in command:
+            return self._vision(command)
+        elif "read screen" in command or "screen text" in command:
+            return self._read_screen()
+        elif "take screenshot" in command or "capture screen" in command:
+            return self._screenshot()
+        
+        # Document AI
+        elif "read document" in command or "read file" in command or "open document" in command:
+            return self._read_doc(command)
+        elif "summarize" in command and ("document" in command or "file" in command or "pdf" in command):
+            return self._summarize_doc(command)
+        
+        # Image Generation
+        elif "generate image" in command or "create image" in command or "draw" in command:
+            return self._generate_img(command)
+        elif "make image" in command or "show me" in command:
+            return self._generate_img(command)
         
         # Default
         else:
@@ -955,6 +978,72 @@ class SystemController:
         except:
             return "I couldn't calculate that."
     
+    def _vision(self, command: str) -> str:
+        result = self.vision.describe_screen()
+        return f"Screen analysis: {result[:800]}"
+    
+    def _read_screen(self) -> str:
+        result = self.vision.read_text_from_screen()
+        return f"Screen text: {result[:500]}" if len(result) > 10 else "No readable text found on screen."
+    
+    def _read_doc(self, command: str) -> str:
+        # Extract file path or use last accessed file
+        file_path = command.replace("read document", "").replace("read file", "").replace("open document", "").strip()
+        
+        if file_path and os.path.exists(os.path.expanduser(file_path)):
+            result = self.document_ai.read_document(os.path.expanduser(file_path))
+            return f"Document content:\n{result[:1000]}"
+        elif file_path:
+            # Try to find in common locations
+            search_paths = [
+                os.path.expanduser(f"~/Documents/{file_path}"),
+                os.path.expanduser(f"~/Desktop/{file_path}"),
+                os.path.expanduser(f"~/Downloads/{file_path}"),
+            ]
+            for path in search_paths:
+                if os.path.exists(path):
+                    result = self.document_ai.read_document(path)
+                    return f"Document content:\n{result[:1000]}"
+            return f"File not found: {file_path}"
+        else:
+            return "Which document should I read? Say 'read document' followed by the filename."
+    
+    def _summarize_doc(self, command: str) -> str:
+        file_path = command.replace("summarize", "").replace("document", "").replace("file", "").replace("pdf", "").strip()
+        
+        if file_path:
+            if os.path.exists(os.path.expanduser(file_path)):
+                return self.document_ai.summarize_document(os.path.expanduser(file_path))
+            else:
+                # Try common locations
+                search_paths = [
+                    os.path.expanduser(f"~/Documents/{file_path}"),
+                    os.path.expanduser(f"~/Desktop/{file_path}"),
+                ]
+                for path in search_paths:
+                    if os.path.exists(path):
+                        return self.document_ai.summarize_document(path)
+        
+        return "Which document should I summarize? Say 'summarize document' followed by the filename."
+    
+    def _generate_img(self, command: str) -> str:
+        prompt = command
+        for prefix in ["generate image", "create image", "make image", "draw", "show me", "show me a", "create a"]:
+            prompt = prompt.replace(prefix, "").strip()
+        
+        if prompt:
+            style = "realistic"
+            if "cartoon" in prompt:
+                style = "cartoon"
+                prompt = prompt.replace("cartoon", "").strip()
+            elif "art" in prompt or "painting" in prompt:
+                style = "artistic painting"
+                prompt = prompt.replace("art", "").replace("painting", "").strip()
+            
+            return self.image_gen.generate_and_describe(prompt)
+        
+        return "What image should I generate? Say 'generate image' followed by your description."
+    
     def _run_terminal(self, command: str) -> Optional[str]:
         if command.startswith("run ") or command.startswith("execute ") or command.startswith("$"):
             cmd = command.replace("run ", "").replace("execute ", "").replace("$", "").strip()
@@ -964,6 +1053,309 @@ class SystemController:
             except Exception as e:
                 return f"Error: {e}"
         return None
+
+
+# =============================================================================
+# VISION MODULE — Screen reading, image analysis
+# =============================================================================
+
+class VisionModule:
+    def __init__(self):
+        self.screenshot_path = os.path.join(tempfile.gettempdir(), "friday_vision.png")
+    
+    def capture_screen(self) -> str:
+        subprocess.run(["screencapture", "-x", self.screenshot_path], capture_output=True)
+        return self.screenshot_path
+    
+    def analyze_image(self, image_path: str = None) -> str:
+        if image_path is None:
+            image_path = self.capture_screen()
+        
+        try:
+            import base64
+            with open(image_path, "rb") as f:
+                img_data = base64.b64encode(f.read()).decode()
+            
+            # Send to Groq for vision analysis
+            import urllib.request, urllib.error, json
+            payload = {
+                "model": "llama-3.2-11b-vision-preview",
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Describe this image in detail. What is shown on screen?"},
+                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_data}"}}
+                    ]
+                }],
+                "max_tokens": 300
+            }
+            
+            data = json.dumps(payload).encode()
+            req = urllib.request.Request(
+                "https://api.groq.com/openai/v1/chat/completions",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}"
+                },
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=30) as r:
+                result = json.loads(r.read())
+            
+            return result["choices"][0]["message"]["content"]
+        
+        except Exception as e:
+            return f"Vision analysis unavailable: {str(e)[:100]}"
+    
+    def read_text_from_screen(self) -> str:
+        try:
+            import subprocess
+            image_path = self.capture_screen()
+            result = subprocess.run(
+                ["screencapture", "-x", "-T", "0", "-i", image_path],
+                capture_output=True
+            )
+            
+            # Use system OCR
+            result = subprocess.run(
+                ["textutil", "-convert", "txt", "-stdout", image_path],
+                capture_output=True, text=True
+            )
+            
+            if result.stdout:
+                return result.stdout.strip()[:1000]
+            return "No text detected on screen."
+        except:
+            return "Screen text extraction unavailable."
+    
+    def describe_screen(self) -> str:
+        return self.analyze_image()
+
+
+# =============================================================================
+# DOCUMENT AI — PDF, Word, Excel reading
+# =============================================================================
+
+class DocumentAI:
+    def __init__(self):
+        self.supported_formats = [".pdf", ".docx", ".doc", ".txt", ".csv", ".xlsx", ".xls"]
+    
+    def read_document(self, file_path: str) -> str:
+        if not os.path.exists(file_path):
+            return f"File not found: {file_path}"
+        
+        ext = os.path.splitext(file_path)[1].lower()
+        
+        if ext == ".pdf":
+            return self._read_pdf(file_path)
+        elif ext in [".docx", ".doc"]:
+            return self._read_word(file_path)
+        elif ext == ".txt":
+            return self._read_text(file_path)
+        elif ext in [".xlsx", ".xls"]:
+            return self._read_excel(file_path)
+        elif ext == ".csv":
+            return self._read_csv(file_path)
+        else:
+            return f"Unsupported format: {ext}"
+    
+    def _read_pdf(self, file_path: str) -> str:
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["pdftotext", file_path, "-"],
+                capture_output=True, text=True
+            )
+            if result.stdout:
+                return result.stdout[:3000]
+            return "Could not extract text from PDF."
+        except FileNotFoundError:
+            try:
+                import PyPDF2
+                with open(file_path, "rb") as f:
+                    reader = PyPDF2.PdfReader(f)
+                    text = ""
+                    for page in reader.pages[:10]:
+                        text += page.extract_text() or ""
+                    return text[:3000]
+            except:
+                return "PDF reading requires pdftotext or PyPDF2. Install: brew install poppler"
+        except Exception as e:
+            return f"PDF error: {str(e)[:100]}"
+    
+    def _read_word(self, file_path: str) -> str:
+        try:
+            from docx import Document
+            doc = Document(file_path)
+            text = "\n".join([p.text for p in doc.paragraphs])
+            return text[:3000]
+        except ImportError:
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["textutil", "-convert", "txt", "-stdout", file_path],
+                    capture_output=True, text=True
+                )
+                return result.stdout[:3000]
+            except:
+                return "Word reading requires python-docx. Install: pip install python-docx"
+        except Exception as e:
+            return f"Word error: {str(e)[:100]}"
+    
+    def _read_text(self, file_path: str) -> str:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()[:5000]
+        except Exception as e:
+            return f"Text read error: {str(e)[:100]}"
+    
+    def _read_excel(self, file_path: str) -> str:
+        try:
+            import pandas as pd
+            df = pd.read_excel(file_path)
+            return f"Excel file: {len(df)} rows, {len(df.columns)} columns\n\n{df.head(20).to_string()}"
+        except ImportError:
+            return "Excel reading requires pandas + openpyxl. Install: pip install pandas openpyxl"
+        except Exception as e:
+            return f"Excel error: {str(e)[:100]}"
+    
+    def _read_csv(self, file_path: str) -> str:
+        try:
+            import pandas as pd
+            df = pd.read_csv(file_path)
+            return f"CSV file: {len(df)} rows, {len(df.columns)} columns\n\n{df.head(20).to_string()}"
+        except Exception as e:
+            return f"CSV error: {str(e)[:100]}"
+    
+    def summarize_document(self, file_path: str) -> str:
+        content = self.read_document(file_path)
+        if "error" in content.lower() or "unavailable" in content.lower():
+            return content
+        
+        try:
+            import urllib.request, urllib.error, json
+            
+            prompt = f"Summarize this document in 3-5 bullet points:\n\n{content[:2000]}"
+            
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 400
+            }
+            
+            data = json.dumps(payload).encode()
+            req = urllib.request.Request(
+                "https://api.groq.com/openai/v1/chat/completions",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}"
+                },
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=30) as r:
+                result = json.loads(r.read())
+            
+            return result["choices"][0]["message"]["content"]
+        
+        except Exception as e:
+            return f"Summarization failed: {str(e)[:100]}"
+
+
+# =============================================================================
+# IMAGE GENERATION — DALL-E / Stable Diffusion
+# =============================================================================
+
+class ImageGenerator:
+    def __init__(self):
+        self.output_dir = os.path.join(os.path.expanduser("~"), "Pictures", "F.R.I.D.A.Y.")
+        os.makedirs(self.output_dir, exist_ok=True)
+    
+    def generate_image(self, prompt: str, style: str = "realistic") -> str:
+        try:
+            import urllib.request, urllib.error, json
+            
+            # Use Groq's image generation or OpenAI DALL-E
+            # For now, we'll use a placeholder that creates image via OpenAI
+            # You can add your OpenAI API key to use DALL-E
+            
+            # Try OpenAI DALL-E if API key available
+            openai_key = os.getenv("OPENAI_API_KEY")
+            
+            if openai_key:
+                return self._generate_dalle(prompt, openai_key, style)
+            else:
+                # Fallback: Search for related images
+                return self._search_image(prompt)
+        
+        except Exception as e:
+            return f"Image generation failed: {str(e)[:100]}"
+    
+    def _generate_dalle(self, prompt: str, api_key: str, style: str) -> str:
+        try:
+            import urllib.request, json
+            
+            styled_prompt = f"{prompt}, {style} style, high quality, detailed"
+            
+            payload = {
+                "prompt": styled_prompt,
+                "n": 1,
+                "size": "1024x1024"
+            }
+            
+            data = json.dumps(payload).encode()
+            
+            # Create image first
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/images/generations",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}"
+                },
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=60) as r:
+                result = json.loads(r.read())
+            
+            image_url = result["data"][0]["url"]
+            
+            # Download image
+            filename = f"friday_image_{int(time.time())}.png"
+            filepath = os.path.join(self.output_dir, filename)
+            
+            img_req = urllib.request.Request(image_url)
+            with urllib.request.urlopen(img_req, timeout=30) as r:
+                with open(filepath, "wb") as f:
+                    f.write(r.read())
+            
+            # Open in Preview
+            subprocess.run(["open", "-a", "Preview", filepath])
+            
+            return f"Image generated and saved to {filepath}"
+        
+        except Exception as e:
+            return f"DALL-E error: {str(e)[:100]}"
+    
+    def _search_image(self, prompt: str) -> str:
+        try:
+            # Open browser with image search
+            query = prompt.replace(" ", "+")
+            url = f"https://www.google.com/search?tbm=isch&q={query}"
+            subprocess.run(["open", url], capture_output=True)
+            return f"Searching Google Images for: {prompt}"
+        except:
+            return "Image search unavailable."
+    
+    def generate_and_describe(self, prompt: str) -> str:
+        result = self.generate_image(prompt)
+        if "saved to" in result:
+            return f"{result}\n\nI've created the image based on your description. You can view it in Preview."
+        return result
 
 
 # =============================================================================
