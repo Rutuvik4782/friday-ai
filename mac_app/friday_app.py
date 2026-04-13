@@ -489,7 +489,234 @@ class WakeWordListener(QObject):
             time.sleep(0.5)
 
 
-class ArcReactorWidget(QGraphicsView):
+class ArcReactorWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(260, 260)
+        self.angle = 0.0
+        self.phase = 0.0
+        self.pulse = 0.5
+        self.wake_active = False
+        self.wake_timer = 0
+        self.particles = []
+        for _ in range(20):
+            self.particles.append({
+                'angle': random.random() * 360,
+                'radius': 40 + random.random() * 80,
+                'speed': 0.2 + random.random() * 0.5,
+                'size': 1 + random.random() * 2,
+                'alpha': 50 + random.random() * 100
+            })
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.animate)
+        self.timer.start(30)
+
+    def animate(self):
+        self.angle += 1
+        self.phase += 0.04
+        self.pulse = 0.6 + 0.4 * math.sin(self.phase * 1.5)
+        if self.wake_active:
+            self.wake_timer += 1
+            if self.wake_timer > 60:
+                self.wake_active = False
+                self.wake_timer = 0
+        for p in self.particles:
+            p['angle'] += p['speed']
+        self.update()
+
+    def pulse_wake(self):
+        self.wake_active = True
+        self.wake_timer = 0
+
+    def paintEvent(self, event):
+        w = min(self.width(), self.height())
+        cx, cy = self.width() / 2, self.height() / 2
+        s = w / 2
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        p.translate(cx, cy)
+        p.scale(s / 130, s / 130)
+
+        base_color = QColor(0, 180, 255) if not self.wake_active else QColor(0, 255, 180)
+        glow_intensity = int(200 * self.pulse)
+
+        # Outer ambient glow
+        for i in range(12, 0, -1):
+            alpha = int(3 * (13 - i))
+            radius = 125 + i * 4
+            p.setPen(QPen(QColor(base_color.red(), base_color.green(), base_color.blue(), alpha), i * 2))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawEllipse(-radius, -radius, radius * 2, radius * 2)
+
+        # Containment ring (outermost)
+        p.setPen(QPen(QColor(30, 40, 50), 4))
+        p.setBrush(QBrush(QColor(15, 20, 28)))
+        p.drawEllipse(-125, -125, 250, 250)
+
+        # Outer ring with tick marks
+        for i in range(60):
+            angle_rad = math.radians(i * 6)
+            inner_r = 118
+            outer_r = 122 if i % 5 == 0 else 120
+            x1 = inner_r * math.cos(angle_rad)
+            y1 = inner_r * math.sin(angle_rad)
+            x2 = outer_r * math.cos(angle_rad)
+            y2 = outer_r * math.sin(angle_rad)
+            if i % 5 == 0:
+                p.setPen(QPen(QColor(0, 140, 220, 180), 2))
+            else:
+                p.setPen(QPen(QColor(0, 100, 160, 80), 1))
+            p.drawLine(int(x1), int(y1), int(x2), int(y2))
+
+        # Energy ring 1 (slow, clockwise)
+        r1_angle = self.angle * 0.3
+        for i in range(6):
+            seg_angle = math.radians(r1_angle + i * 60)
+            sx = 105 * math.cos(seg_angle)
+            sy = 105 * math.sin(seg_angle)
+            ex = 118 * math.cos(seg_angle)
+            ey = 118 * math.sin(seg_angle)
+            p.setPen(QPen(QColor(0, glow_intensity, glow_intensity, 220), 3))
+            p.drawLine(int(sx), int(sy), int(ex), int(ey))
+
+        # Energy ring 2 (medium, counter-clockwise)
+        r2_angle = -self.angle * 0.5
+        for i in range(4):
+            seg_angle = math.radians(r2_angle + i * 90 + 45)
+            sx = 88 * math.cos(seg_angle)
+            sy = 88 * math.sin(seg_angle)
+            ex = 98 * math.cos(seg_angle)
+            ey = 98 * math.sin(seg_angle)
+            p.setPen(QPen(QColor(0, glow_intensity + 20, glow_intensity + 20, 200), 2))
+            p.drawLine(int(sx), int(sy), int(ex), int(ey))
+
+        # Inner rotating ring (fast, clockwise)
+        r3_angle = self.angle * 0.8
+        for i in range(8):
+            seg_angle = math.radians(r3_angle + i * 45)
+            sx = 68 * math.cos(seg_angle)
+            sy = 68 * math.sin(seg_angle)
+            ex = 78 * math.cos(seg_angle)
+            ey = 78 * math.sin(seg_angle)
+            p.setPen(QPen(QColor(0, glow_intensity + 40, glow_intensity + 40, 180), 2))
+            p.drawLine(int(sx), int(sy), int(ex), int(ey))
+
+        # Hexagonal housing
+        hex_path = QPainterPath()
+        for i in range(6):
+            angle_rad = math.radians(60 * i - 30)
+            x = 62 * math.cos(angle_rad)
+            y = 62 * math.sin(angle_rad)
+            if i == 0:
+                hex_path.moveTo(x, y)
+            else:
+                hex_path.lineTo(x, y)
+        hex_path.closeSubpath()
+        hex_pen = QPen(QColor(0, 140, 200, 150), 2)
+        p.setPen(hex_pen)
+        p.setBrush(QBrush(QColor(5, 15, 25, 100)))
+        p.drawPath(hex_path)
+
+        # Inner hex detail
+        inner_hex = QPainterPath()
+        for i in range(6):
+            angle_rad = math.radians(-self.angle * 0.2 + 60 * i - 30)
+            x = 42 * math.cos(angle_rad)
+            y = 42 * math.sin(angle_rad)
+            if i == 0:
+                inner_hex.moveTo(x, y)
+            else:
+                inner_hex.lineTo(x, y)
+        inner_hex.closeSubpath()
+        p.setPen(QPen(QColor(0, 160, 220, 120), 1))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawPath(inner_hex)
+
+        # Arc segments (energy arcs)
+        arc_angle = self.angle * 1.2
+        for i in range(4):
+            span = 25
+            start_a = math.radians(arc_angle + i * 90)
+            path = QPainterPath()
+            path.moveTo(0, 0)
+            for j in range(span + 1):
+                a = start_a + math.radians(j)
+                path.lineTo(55 * math.cos(a), 55 * math.sin(a))
+            path.lineTo(0, 0)
+            arc_alpha = int(60 + 40 * math.sin(self.phase + i * 1.5))
+            p.setPen(QPen(QColor(0, 200, 255, arc_alpha), 2))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawPath(path)
+
+        # Core glow layers
+        core_r = 28 * (0.85 + 0.15 * self.pulse)
+        for i in range(8, 0, -1):
+            glow_r = core_r + i * 4
+            alpha = int(12 * (9 - i) * self.pulse)
+            p.setPen(QPen(QColor(base_color.red(), base_color.green(), base_color.blue(), alpha)))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawEllipse(int(-glow_r), int(-glow_r), int(glow_r * 2), int(glow_r * 2))
+
+        # Core body (dark metallic)
+        core_grad = QRadialGradient(0, 0, core_r)
+        core_grad.setColorAt(0, QColor(200, 240, 255, 255))
+        core_grad.setColorAt(0.4, QColor(0, 160, 230, 255))
+        core_grad.setColorAt(0.8, QColor(0, 80, 140, 200))
+        core_grad.setColorAt(1.0, QColor(0, 30, 60, 150))
+        p.setPen(QPen(QColor(0, 100, 160, 200), 2))
+        p.setBrush(QBrush(core_grad))
+        p.drawEllipse(int(-core_r), int(-core_r), int(core_r * 2), int(core_r * 2))
+
+        # Core highlight
+        highlight_r = core_r * 0.4
+        hl_grad = QRadialGradient(-core_r * 0.2, -core_r * 0.2, highlight_r)
+        hl_grad.setColorAt(0, QColor(255, 255, 255, 200))
+        hl_grad.setColorAt(0.5, QColor(200, 240, 255, 100))
+        hl_grad.setColorAt(1.0, QColor(100, 200, 255, 0))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(hl_grad))
+        p.drawEllipse(int(-highlight_r), int(-highlight_r), int(highlight_r * 2), int(highlight_r * 2))
+
+        # Particles
+        for particle in self.particles:
+            dist = particle['radius'] * (0.6 + 0.4 * self.pulse)
+            px = dist * math.cos(math.radians(particle['angle']))
+            py = dist * math.sin(math.radians(particle['angle']))
+            alpha = int(particle['alpha'] * self.pulse)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(QColor(0, 200, 255, alpha)))
+            p.drawEllipse(int(px - particle['size']), int(py - particle['size']), int(particle['size'] * 2), int(particle['size'] * 2))
+
+        # Reflection on bottom
+        refl_path = QPainterPath()
+        refl_path.moveTo(-110, 120)
+        refl_path.lineTo(110, 120)
+        refl_path.lineTo(90, 125)
+        refl_path.lineTo(-90, 125)
+        refl_path.closeSubpath()
+        refl_grad = QLinearGradient(0, 120, 0, 128)
+        refl_grad.setColorAt(0, QColor(0, 150, 220, 60))
+        refl_grad.setColorAt(1, QColor(0, 80, 140, 0))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(refl_grad))
+        p.drawPath(refl_path)
+
+        # Metallic rim highlight (top)
+        rim_path = QPainterPath()
+        rim_path.moveTo(-120, -122)
+        rim_path.arcTo(-122, -124, 244, 8, 200, 40)
+        rim_grad = QLinearGradient(-120, -125, -120, -118)
+        rim_grad.setColorAt(0, QColor(80, 120, 160, 100))
+        rim_grad.setColorAt(0.5, QColor(40, 80, 120, 60))
+        rim_grad.setColorAt(1, QColor(20, 40, 60, 0))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(rim_grad))
+        p.drawPath(rim_path)
+
+
+class ArcReactorWidgetOLD(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.scene = QGraphicsScene(self)
