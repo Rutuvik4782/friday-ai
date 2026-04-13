@@ -23,8 +23,8 @@ echo "  ✓ Python 3 found"
 
 echo ""
 echo "  [2/4] Installing dependencies..."
-python3 -m pip install PyQt6 pyttsx3 --quiet 2>/dev/null || \
-python3 -m pip install PyQt6 pyttsx3
+python3 -m pip install PyQt6 pyttsx3 sounddevice edge-tts --break-system-packages --quiet 2>/dev/null || \
+python3 -m pip install PyQt6 pyttsx3 sounddevice edge-tts --break-system-packages
 echo "  ✓ Dependencies installed"
 
 echo ""
@@ -41,6 +41,7 @@ LAUNCHER
 chmod +x "$APP_DIR/Contents/MacOS/F.R.I.D.A.Y."
 
 cp "$SCRIPT_DIR/friday_app.py" "$APP_DIR/Contents/Resources/"
+cp "$SCRIPT_DIR/voice_helper.swift" "$APP_DIR/Contents/Resources/"
 
 cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>

@@ -1,5 +1,7 @@
 # F.R.I.D.A.Y. macOS App Dependencies
-# Run: pip3 install -r requirements.txt
+# Run: pip3 install -r requirements.txt --break-system-packages
 
 PyQt6>=6.4.0
 pyttsx3>=2.90
+sounddevice>=0.4.0
+edge-tts>=6.0.0
