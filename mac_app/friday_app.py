@@ -1,163 +1,120 @@
 #!/usr/bin/env python3
 """
-F.R.I.D.A.Y. — Native macOS AI Assistant
-A JARVIS-style AI app for your Mac.
-
-Run: python3 friday_app.py
+F.R.I.D.A.Y. — Professional JARVIS-Style macOS AI Assistant
 """
 
-import sys
-import os
-import json
-import time
-import threading
-import random
-import datetime
+import sys, os, json, time, threading, datetime, math
 import pyttsx3
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QTextEdit, QLineEdit, QLabel, QScrollArea,
-    QFrame, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem,
-    QSplashScreen, QDialog, QSizePolicy
+    QPushButton, QLabel, QScrollArea, QFrame, QGraphicsView,
+    QGraphicsScene, QSplashScreen, QLineEdit
 )
 from PyQt6.QtCore import (
-    Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect,
-    pyqtSignal, QThread, pyqtSlot, QSize
+    Qt, QTimer, pyqtSignal, QThread
 )
 from PyQt6.QtGui import (
-    QFont, QColor, QPalette, QPainter, QBrush, QPen,
-    QPainterPath, QTextCursor, QPixmap
+    QFont, QColor, QPalette, QPainter, QBrush, QPen
 )
-
-try:
-    import requests
-except ImportError:
-    import urllib.request as requests
-
-
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
 
 FRIDAY_SERVER = "https://friday-ai-2hbv.onrender.com"
 YOUR_NAME = "Rutwik"
 LOCATION = "Pune"
-APP_NAME = "F.R.I.D.A.Y."
 
-
-# =============================================================================
-# TTS ENGINE — Victoria voice on macOS
-# =============================================================================
 
 class FridayVoice:
     def __init__(self):
         self.engine = pyttsx3.init()
-        self.engine.setProperty('rate', 165)
+        self.engine.setProperty('rate', 160)
         self.engine.setProperty('volume', 1.0)
-        
-        voices = self.engine.getProperty('voices')
-        for voice in voices:
+        for voice in self.engine.getProperty('voices'):
             if 'Victoria' in voice.name:
                 self.engine.setProperty('voice', voice.id)
                 break
-            elif 'Samantha' in voice.name:
-                self.engine.setProperty('voice', voice.id)
 
     def speak(self, text):
         def run():
-            self.engine.say(text)
-            self.engine.runAndWait()
+            try:
+                self.engine.say(text)
+                self.engine.runAndWait()
+            except Exception:
+                pass
         threading.Thread(target=run, daemon=True).start()
 
 
-# =============================================================================
-# STT ENGINE — Voice recognition (stub, requires speech-recognition package)
-# =============================================================================
-
-class FridayListener(QThread):
-    heard = pyqtSignal(str)
-    status = pyqtSignal(str)
-
-    def __init__(self):
-        super().__init__()
-        self.running = False
-
-    def run(self):
-        self.status.emit("unavailable")
-
-    def stop(self):
-        self.running = False
-
-
-# =============================================================================
-# ARC REACTOR WIDGET
-# =============================================================================
-
-class ArcReactor(QGraphicsView):
+class ArcReactorWidget(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
-        self.setSceneRect(-100, -100, 200, 200)
+        self.setSceneRect(-150, -150, 300, 300)
         self.setBackgroundRole(QPalette.ColorRole.NoRole)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.angle = 0
+        self.pulse = 0
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.rotate)
+        self.timer.timeout.connect(self.update_reactor)
         self.timer.start(30)
-        
         self.build_reactor()
-        
+
     def build_reactor(self):
         self.scene.clear()
-        
-        # Outer glow
-        for i in range(5):
-            glow = QGraphicsEllipseItem(-90 + i * 5, -90 + i * 5, 180 - i * 10, 180 - i * 10)
-            glow.setPen(QPen(QColor(0, 170, 255, 50 - i * 8), 2))
+        for i in range(8):
+            radius = 130 + i * 4
+            glow = self.scene.addEllipse(-radius, -radius, radius*2, radius*2)
+            glow.setPen(QPen(QColor(0, 150, 255, max(0, 8 - i * 1.5))))
             glow.setBrush(Qt.BrushStyle.NoBrush)
-            self.scene.addItem(glow)
-        
-        # Main rings
-        colors = [(0, 200, 255), (0, 255, 255), (0, 150, 255), (0, 100, 200), (0, 80, 180)]
-        radii = [80, 65, 50, 35, 20]
-        for color, radius in zip(colors, radii):
-            ring = QGraphicsEllipseItem(-radius, -radius, radius * 2, radius * 2)
-            ring.setPen(QPen(QColor(*color), 3))
+
+        ring_configs = [
+            (120, 2.5, QColor(0, 220, 255, 220)),
+            (100, -1.8, QColor(0, 200, 255, 200)),
+            (85, 2.2, QColor(0, 180, 255, 180)),
+            (70, -1.5, QColor(0, 160, 255, 160)),
+            (55, 1.8, QColor(0, 140, 255, 140)),
+            (40, -1.2, QColor(0, 120, 255, 120)),
+            (25, 1.5, QColor(0, 100, 255, 200)),
+        ]
+        self.rings = []
+        for radius, speed, color in ring_configs:
+            ring = self.scene.addEllipse(-radius, -radius, radius*2, radius*2)
+            ring.setPen(QPen(color, 2))
             ring.setBrush(Qt.BrushStyle.NoBrush)
-            self.scene.addItem(ring)
-        
-        # Core
-        core = QGraphicsEllipseItem(-15, -15, 30, 30)
-        core.setBrush(QBrush(QColor(200, 240, 255)))
-        core.setPen(QPen(Qt.PenStyle.NoPen))
-        self.scene.addItem(core)
-        
-    def rotate(self):
-        self.angle = (self.angle + 1) % 360
-        self.update()
+            self.rings.append((ring, speed))
 
+        glow_inner = self.scene.addEllipse(-18, -18, 36, 36)
+        glow_inner.setBrush(QBrush(QColor(100, 220, 255, 100)))
+        glow_inner.setPen(Qt.PenStyle.NoPen)
+        self.core = self.scene.addEllipse(-12, -12, 24, 24)
+        self.core.setBrush(QBrush(QColor(255, 255, 255, 255)))
+        self.core.setPen(Qt.PenStyle.NoPen)
 
-# =============================================================================
-# CHAT BUBBLE WIDGET
-# =============================================================================
+    def update_reactor(self):
+        self.angle += 1
+        self.pulse = abs(math.sin(self.angle * 0.05))
+        for ring, speed in self.rings:
+            ring.setRotation(self.angle * speed)
+        if self.core:
+            self.core.setScale(0.9 + self.pulse * 0.3)
+            g = int(150 + self.pulse * 105)
+            self.core.setBrush(QBrush(QColor(g, g, g)))
+        self.scene.update()
+
 
 class ChatBubble(QFrame):
     def __init__(self, text, is_user=False, parent=None):
         super().__init__(parent)
-        self.is_user = is_user
         self.setStyleSheet(f"""
             QFrame {{
-                background: {"rgba(0, 60, 120, 0.7)" if not is_user else "rgba(180, 60, 0, 0.7)"};
-                border: 1px solid {"rgba(0, 170, 255, 0.4)" if not is_user else "rgba(255, 120, 0, 0.4)"};
-                border-radius: 12px;
+                background: {'rgba(0, 40, 80, 0.85)' if not is_user else 'rgba(80, 30, 0, 0.85)'};
+                border: 1px solid {'rgba(0, 180, 255, 0.3)' if not is_user else 'rgba(255, 120, 0, 0.3)'};
+                border-radius: 10px;
                 padding: 10px;
-                margin: 5px 20px;
+                margin: 4px 20px;
             }}
         """)
         layout = QVBoxLayout(self)
@@ -169,200 +126,213 @@ class ChatBubble(QFrame):
         layout.addWidget(label)
 
 
-# =============================================================================
-# MAIN WINDOW
-# =============================================================================
-
 class FridayWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.voice = FridayVoice()
-        self.listener = None
         self.conversation = []
-        self.is_listening = False
-        
-        self.setup_ui()
+        self._init_ui()
         self.greeting()
-        
-    def setup_ui(self):
-        self.setWindowTitle("F.R.I.D.A.Y. — Tony Stark AI")
-        self.setStyleSheet("background-color: #0a0c10;")
-        
-        # Center on screen
-        screen = QScreen.availableGeometry(QApplication.primaryScreen())
-        self.resize(900, 700)
+
+    def _init_ui(self):
+        self.setWindowTitle("F.R.I.D.A.Y. — Tony Stark AI Assistant")
+        self.setStyleSheet("background-color: #030810;")
+        self.resize(1000, 750)
+        self.setMinimumSize(800, 600)
+
+        screen = QApplication.primaryScreen().geometry()
         self.move(
             (screen.width() - self.width()) // 2,
             (screen.height() - self.height()) // 2
         )
-        
-        # Title bar
-        title_bar = QLabel(f"  {APP_NAME} — FULLY RESPONSIVE INTELLIGENT DIGITAL ASSISTANT FOR YOU")
-        title_bar.setStyleSheet("""
-            background: rgba(0, 20, 40, 0.9);
-            color: #0ff;
+
+        title = QLabel("  F.R.I.D.A.Y.  —  FULLY RESPONSIVE INTELLIGENT DIGITAL ASSISTANT FOR YOU")
+        title.setStyleSheet("""
+            background: rgba(0, 15, 35, 0.95);
+            color: #00d4ff;
             font-family: Arial;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
             letter-spacing: 2px;
             padding: 8px 15px;
-            border-bottom: 1px solid rgba(0, 170, 255, 0.3);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
         """)
-        title_bar.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        title_bar.setFixedHeight(36)
-        
-        # Central widget
+        title.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        title.setFixedHeight(36)
+
         central = QWidget()
         self.setCentralWidget(central)
-        main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        
-        main_layout.addWidget(title_bar)
-        
-        # Content area
+        main = QVBoxLayout(central)
+        main.setContentsMargins(0, 0, 0, 0)
+        main.setSpacing(0)
+        main.addWidget(title)
+
         content = QWidget()
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(15, 15, 15, 10)
-        
-        # Arc reactor + chat side by side
+        content_layout.setContentsMargins(10, 10, 10, 10)
+
         top_row = QHBoxLayout()
-        
-        # Arc reactor
-        self.arc = ArcReactor()
-        self.arc.setFixedSize(180, 180)
-        
-        # Status panel
-        status_panel = QWidget()
-        status_panel.setStyleSheet("background: rgba(0,20,40,0.5); border-radius: 8px; border: 1px solid rgba(0,170,255,0.2);")
-        status_layout = QVBoxLayout(status_panel)
-        status_layout.setContentsMargins(15, 15, 15, 15)
-        
-        self.status_label = QLabel("STATUS: ONLINE")
-        self.status_label.setStyleSheet("color: #0f0; font-size: 12px; font-weight: bold; letter-spacing: 2px;")
-        self.status_label.setFont(QFont("Courier", 11, QFont.Weight.Bold))
-        
-        self.time_label = QLabel()
-        self.time_label.setStyleSheet("color: rgba(0,200,255,0.7); font-size: 11px;")
-        self.time_label.setFont(QFont("Courier", 10))
-        
-        self.weather_label = QLabel()
-        self.weather_label.setStyleSheet("color: rgba(0,200,255,0.7); font-size: 11px;")
-        self.weather_label.setFont(QFont("Courier", 10))
-        
-        self.listen_label = QLabel("🎤 CLICK TO SPEAK")
-        self.listen_label.setStyleSheet("color: #0ff; font-size: 12px; font-weight: bold; letter-spacing: 1px;")
-        self.listen_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        
-        status_layout.addWidget(self.status_label)
-        status_layout.addWidget(self.time_label)
-        status_layout.addWidget(self.weather_label)
-        status_layout.addStretch()
-        status_layout.addWidget(self.listen_label)
-        
+
+        self.arc = ArcReactorWidget()
+        self.arc.setFixedSize(200, 200)
         top_row.addWidget(self.arc)
+
+        status_panel = QWidget()
+        status_panel.setStyleSheet("""
+            background: rgba(0, 15, 35, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 8px;
+            padding: 5px;
+        """)
+        sp_layout = QVBoxLayout(status_panel)
+        sp_layout.setContentsMargins(10, 10, 10, 10)
+        sp_layout.setSpacing(8)
+
+        self.status_label = QLabel("STATUS: ONLINE")
+        self.status_label.setStyleSheet("color: #00ff88; font-size: 13px; font-weight: bold; letter-spacing: 2px;")
+        self.status_label.setFont(QFont("Courier", 12, QFont.Weight.Bold))
+
+        self.time_label = QLabel()
+        self.time_label.setStyleSheet("color: rgba(0, 200, 255, 0.7); font-size: 11px;")
+        self.time_label.setFont(QFont("Courier", 10))
+
+        self.weather_label = QLabel("WEATHER: Loading...")
+        self.weather_label.setStyleSheet("color: rgba(0, 200, 255, 0.7); font-size: 11px;")
+        self.weather_label.setFont(QFont("Courier", 10))
+
+        self.response_label = QLabel("RESPONSE: --ms")
+        self.response_label.setStyleSheet("color: rgba(0, 200, 255, 0.7); font-size: 11px;")
+        self.response_label.setFont(QFont("Courier", 10))
+
+        sp_layout.addWidget(self.status_label)
+        sp_layout.addWidget(self.time_label)
+        sp_layout.addWidget(self.weather_label)
+        sp_layout.addWidget(self.response_label)
+        sp_layout.addStretch()
         top_row.addWidget(status_panel, 1)
-        
+
+        actions_panel = QWidget()
+        actions_panel.setStyleSheet("""
+            background: rgba(0, 15, 35, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 8px;
+            padding: 5px;
+        """)
+        ap_layout = QVBoxLayout(actions_panel)
+        ap_layout.setContentsMargins(10, 10, 10, 10)
+        ap_layout.setSpacing(6)
+
+        ap_title = QLabel("QUICK ACTIONS")
+        ap_title.setStyleSheet("color: rgba(0, 212, 255, 0.5); font-size: 10px; letter-spacing: 2px;")
+        ap_title.setFont(QFont("Arial", 9, QFont.Weight.Bold))
+        ap_layout.addWidget(ap_title)
+
+        for name, prompt in [
+            ("Weather", "What is the weather in Pune?"),
+            ("News", "What are the latest tech news?"),
+            ("Code", "Write a Python function to find prime numbers"),
+            ("Search", "Search for latest AI developments"),
+            ("Translate", "Translate hello to Japanese"),
+        ]:
+            btn = QPushButton(name)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: rgba(0, 30, 60, 0.6);
+                    border: 1px solid rgba(0, 212, 255, 0.1);
+                    border-radius: 5px;
+                    color: #c8e8f0;
+                    padding: 6px 12px;
+                    text-align: left;
+                    font-size: 12px;
+                    font-family: Rajdhani;
+                }
+                QPushButton:hover {
+                    background: rgba(0, 60, 120, 0.7);
+                    border-color: rgba(0, 212, 255, 0.4);
+                }
+            """)
+            btn.setFont(QFont("Rajdhani", 12))
+            btn.clicked.connect(lambda checked, p=prompt: self.send_message(p))
+            ap_layout.addWidget(btn)
+
+        top_row.addWidget(actions_panel)
         content_layout.addLayout(top_row)
-        
-        # Chat area
+
         self.chat_area = QScrollArea()
         self.chat_area.setStyleSheet("""
-            QScrollArea { background: transparent; border: none; }
-            QScrollBar:vertical { background: rgba(0,50,80,0.5); width: 4px; border-radius: 2px; }
-            QScrollBar::handle { background: rgba(0,170,255,0.5); border-radius: 2px; }
+            QScrollArea { background: rgba(0, 10, 25, 0.5); border: 1px solid rgba(0, 212, 255, 0.1); border-radius: 8px; }
+            QScrollBar:vertical { background: rgba(0, 50, 80, 0.5); width: 4px; border-radius: 2px; }
+            QScrollBar::handle { background: rgba(0, 170, 255, 0.5); border-radius: 2px; }
         """)
         self.chat_area.setWidgetResizable(True)
         self.chat_area.setFrameShape(QFrame.Shape.NoFrame)
-        
+
         self.chat_container = QWidget()
         self.chat_layout = QVBoxLayout(self.chat_container)
-        self.chat_layout.setContentsMargins(5, 5, 5, 5)
-        self.chat_layout.setSpacing(5)
+        self.chat_layout.setContentsMargins(10, 10, 10, 10)
+        self.chat_layout.setSpacing(8)
         self.chat_layout.addStretch()
-        
+
         self.chat_area.setWidget(self.chat_container)
         content_layout.addWidget(self.chat_area, 1)
-        
-        # Input area
+
         input_row = QHBoxLayout()
-        
+
         self.input_field = QLineEdit()
         self.input_field.setPlaceholderText("  Talk to F.R.I.D.A.Y...")
         self.input_field.setStyleSheet("""
             QLineEdit {
                 background: rgba(0, 30, 60, 0.7);
                 color: #c8e8f0;
-                border: 1px solid rgba(0, 170, 255, 0.3);
+                border: 1px solid rgba(0, 212, 255, 0.2);
                 border-radius: 8px;
                 padding: 12px 16px;
                 font-size: 14px;
                 font-family: Rajdhani;
             }
             QLineEdit:focus {
-                border: 1px solid #0af;
+                border: 1px solid #00d4ff;
                 background: rgba(0, 50, 100, 0.7);
             }
-            QLineEdit::placeholder { color: rgba(0,150,200,0.4); }
         """)
         self.input_field.setFont(QFont("Rajdhani", 14))
         self.input_field.returnPressed.connect(self.send_message)
-        
-        self.mic_btn = QPushButton("🎤")
-        self.mic_btn.setFixedSize(50, 46)
-        self.mic_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(0, 30, 60, 0.7);
-                border: 1px solid rgba(0, 170, 255, 0.3);
-                border-radius: 8px;
-                color: #0ff;
-                font-size: 20px;
-            }
-            QPushButton:hover { background: rgba(0, 80, 150, 0.7); border-color: #0af; }
-            QPushButton:pressed { background: rgba(0, 100, 200, 0.8); }
-        """)
-        self.mic_btn.clicked.connect(self.toggle_listening)
-        
+
         self.send_btn = QPushButton("SEND")
-        self.send_btn.setFixedSize(80, 46)
+        self.send_btn.setFixedSize(90, 46)
         self.send_btn.setStyleSheet("""
             QPushButton {
-                background: linear-gradient(135deg, #0066aa, #00aaff);
+                background: linear-gradient(135deg, #0066aa, #0099dd);
                 color: white;
                 border-radius: 8px;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 13px;
                 letter-spacing: 2px;
             }
-            QPushButton:hover { background: linear-gradient(135deg, #0088cc, #00ccff); }
+            QPushButton:hover { background: linear-gradient(135deg, #0088cc, #00bbff); }
         """)
         self.send_btn.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         self.send_btn.clicked.connect(self.send_message)
-        
+
         input_row.addWidget(self.input_field)
-        input_row.addWidget(self.mic_btn)
         input_row.addWidget(self.send_btn)
-        
         content_layout.addLayout(input_row)
-        
-        main_layout.addWidget(content)
-        
-        # Status timer
+
+        main.addWidget(content)
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_time)
         self.timer.start(1000)
         self.update_time()
-        
         self.show()
-        
+
     def update_time(self):
         now = datetime.datetime.now()
-        self.time_label.setText(now.strftime("TIME: %I:%M:%S %p\nDATE: %d %b %Y"))
-        
-        if not getattr(self, '_weather_fetched', False):
-            self._weather_fetched = True
-            threading.Thread(target=self.fetch_weather, daemon=True).start()
-    
+        self.time_label.setText(
+            f"TIME: {now.strftime('%I:%M:%S %p')}\n"
+            f"DATE: {now.strftime('%d %b %Y')}"
+        )
+
     def fetch_weather(self):
         try:
             import urllib.request
@@ -373,11 +343,12 @@ class FridayWindow(QMainWindow):
             current = data.get("current_condition", [{}])[0]
             temp = current.get("temp_C", "?")
             condition = current.get("weatherDesc", [{}])[0].get("value", "Clear")
-            self.weather_label.setText(f"WEATHER: {temp}°C, {condition}\nLOCATION: {LOCATION}")
+            self.weather_label.setText(f"WEATHER: {temp}C, {condition}\nLOCATION: {LOCATION}")
         except Exception:
-            self.weather_label.setText(f"WEATHER: 24°C, Clear\nLOCATION: {LOCATION}")
-    
+            self.weather_label.setText(f"WEATHER: 24C, Clear\nLOCATION: {LOCATION}")
+
     def greeting(self):
+        self.fetch_weather()
         hour = datetime.datetime.now().hour
         if 5 <= hour < 12:
             greeting = f"Good morning, {YOUR_NAME}."
@@ -387,39 +358,35 @@ class FridayWindow(QMainWindow):
             greeting = f"Good evening, {YOUR_NAME}."
         else:
             greeting = f"Good evening, {YOUR_NAME}."
-        
-        full_greeting = (
-            f"{greeting} System online. I'm F.R.I.D.A.Y., fully operational. "
-            f"Pune is currently clear, 24 degrees. All systems nominal. "
-            f"Text input enabled. Type your request below."
+        full = (
+            f"{greeting} System online. I am F.R.I.D.A.Y., fully operational. "
+            f"All neural networks are active. Groq LLM is connected. "
+            f"How may I assist you today?"
         )
-        
-        self.add_message(full_greeting, is_user=False)
-        self.voice.speak(full_greeting)
-    
-    def add_message(self, text, is_user=False):
+        self.add_message(full, False)
+        self.voice.speak(full)
+
+    def add_message(self, text, is_user):
         bubble = ChatBubble(text, is_user)
         self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble)
-        
         QTimer.singleShot(50, lambda: self.chat_area.verticalScrollBar().setValue(
             self.chat_area.verticalScrollBar().maximum()
         ))
-    
+
     def send_message(self, text=None):
         text = text or self.input_field.text().strip()
         if not text:
             return
-        
         self.input_field.clear()
-        self.add_message(text, is_user=True)
+        self.add_message(text, True)
         self.conversation.append({"role": "user", "content": text})
-        
         threading.Thread(target=self.get_response, args=(text,), daemon=True).start()
-    
+
     def get_response(self, text):
+        import urllib.request
         try:
-            import urllib.request, urllib.error
-            data = json.dumps({"messages": self.conversation[-6:]}).encode()
+            start = time.time()
+            data = json.dumps({"messages": self.conversation[-8:]}).encode()
             req = urllib.request.Request(
                 f"{FRIDAY_SERVER}/chat",
                 data=data,
@@ -428,141 +395,57 @@ class FridayWindow(QMainWindow):
             )
             with urllib.request.urlopen(req, timeout=30) as r:
                 result = json.loads(r.read())
+            elapsed = int((time.time() - start) * 1000)
+            self.response_label.setText(f"RESPONSE: {elapsed}ms")
             reply = result.get("reply", "Processing complete, boss.")
-        except Exception as e:
+        except Exception:
             reply = f"Connection disrupted, {YOUR_NAME}. All systems nominal. Try again."
-        
-        self.add_message(reply, is_user=False)
+        self.add_message(reply, False)
         self.voice.speak(reply)
-    
-    def toggle_listening(self):
-        if self.is_listening:
-            self.stop_listening()
-        else:
-            self.start_listening()
-    
-    def start_listening(self):
-        if not self.listener:
-            self.listener = FridayListener()
-            self.listener.heard.connect(self.on_heard)
-            self.listener.status.connect(self.on_listen_status)
-        
-        self.is_listening = True
-        self.mic_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(255, 50, 0, 0.7);
-                border: 2px solid #ff6600;
-                border-radius: 8px;
-                color: #fff;
-                font-size: 20px;
-            }
-        """)
-        self.listen_label.setText("🎤 LISTENING...")
-        self.listener.start()
-    
-    def stop_listening(self):
-        self.is_listening = False
-        if self.listener:
-            self.listener.stop()
-        self.mic_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(0, 30, 60, 0.7);
-                border: 1px solid rgba(0, 170, 255, 0.3);
-                border-radius: 8px;
-                color: #0ff;
-                font-size: 20px;
-            }
-            QPushButton:hover { background: rgba(0, 80, 150, 0.7); border-color: #0af; }
-        """)
-        self.listen_label.setText("🎤 CLICK TO SPEAK")
-    
-    @pyqtSlot(str)
-    def on_heard(self, text):
-        self.stop_listening()
-        if text.strip():
-            self.send_message(text)
-    
-    @pyqtSlot(str)
-    def on_listen_status(self, status):
-        if status == "unavailable":
-            self.listen_label.setText("⚠ VOICE INPUT UNAVAILABLE")
-            self.mic_btn.setEnabled(False)
-            self.mic_btn.setStyleSheet("""
-                QPushButton {
-                    background: rgba(80, 80, 80, 0.5);
-                    border: 1px solid rgba(100, 100, 100, 0.3);
-                    border-radius: 8px;
-                    color: rgba(150, 150, 150, 0.5);
-                    font-size: 20px;
-                }
-            """)
-        elif status == "processing":
-            self.listen_label.setText("⏳ PROCESSING...")
-        elif status == "listening":
-            self.listen_label.setText("🎤 LISTENING...")
-        else:
-            self.listen_label.setText("🎤 CLICK TO SPEAK")
-    
-    def closeEvent(self, event):
-        if self.listener:
-            self.listener.stop()
 
-
-# =============================================================================
-# SPLASH SCREEN
-# =============================================================================
 
 class SplashScreen(QSplashScreen):
     def __init__(self):
-        pixmap = QPixmap(600, 400)
-        pixmap.fill(QColor(10, 12, 16))
+        from PyQt6.QtGui import QPixmap
+        pixmap = QPixmap(500, 350)
+        pixmap.fill(QColor(3, 8, 16))
         super().__init__(pixmap)
-        
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-        
         label = QLabel("F.R.I.D.A.Y.", self)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setStyleSheet("""
-            color: #0ff;
-            font-size: 48px;
+            color: #00d4ff;
+            font-size: 52px;
             font-weight: bold;
-            letter-spacing: 10px;
+            letter-spacing: 12px;
             background: transparent;
-            text-shadow: 0 0 30px rgba(0,255,255,0.8);
+            text-shadow: 0 0 30px rgba(0, 212, 255, 0.8), 0 0 60px rgba(0, 212, 255, 0.4);
         """)
-        label.setFont(QFont("Arial", 48, QFont.Weight.Bold))
-        label.resize(600, 400)
-        label.move(0, 150)
-        
+        label.setFont(QFont("Arial", 52, QFont.Weight.Bold))
+        label.resize(500, 350)
+        label.move(0, 120)
         sub = QLabel("FULLY RESPONSIVE INTELLIGENT DIGITAL ASSISTANT FOR YOU", self)
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub.setStyleSheet("color: rgba(0,170,255,0.6); font-size: 11px; letter-spacing: 3px; background: transparent;")
-        sub.setFont(QFont("Arial", 10))
-        sub.resize(600, 400)
-        sub.move(0, 220)
-        
+        sub.setStyleSheet("color: rgba(0, 212, 255, 0.5); font-size: 10px; letter-spacing: 3px; background: transparent;")
+        sub.setFont(QFont("Arial", 9))
+        sub.resize(500, 350)
+        sub.move(0, 195)
         self.show()
-        QTimer.singleShot(3000, self.finish_splash)
-        
-    def finish_splash(self):
+        QTimer.singleShot(3500, self.finish)
+
+    def finish(self):
         self.window = FridayWindow()
         self.window.show()
         self.hide()
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName(APP_NAME)
-    
+    app.setApplicationName("F.R.I.D.A.Y.")
     palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor(10, 12, 16))
+    palette.setColor(QPalette.ColorRole.Window, QColor(3, 8, 16))
     palette.setColor(QPalette.ColorRole.WindowText, QColor(200, 232, 240))
     app.setPalette(palette)
-    
     splash = SplashScreen()
     sys.exit(app.exec())
 

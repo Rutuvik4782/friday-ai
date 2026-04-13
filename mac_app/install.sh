@@ -22,13 +22,13 @@ fi
 echo "  ✓ Python 3 found"
 
 echo ""
-echo "  [2/5] Installing dependencies..."
+echo "  [2/4] Installing dependencies..."
 python3 -m pip install PyQt6 pyttsx3 --quiet 2>/dev/null || \
 python3 -m pip install PyQt6 pyttsx3
 echo "  ✓ Dependencies installed"
 
 echo ""
-echo "  [3/5] Creating App bundle..."
+echo "  [3/4] Creating App bundle..."
 mkdir -p "$APP_DIR/Contents/MacOS"
 mkdir -p "$APP_DIR/Contents/Resources"
 
@@ -64,7 +64,7 @@ PLIST
 echo "  ✓ App bundle created"
 
 echo ""
-echo "  [4/5] Setting up Login Items..."
+echo "  [4/4] Creating Desktop shortcut..."
 osascript -e "
 tell application \"System Events\"
     if not (exists login item \"F.R.I.D.A.Y.\") then
@@ -72,11 +72,9 @@ tell application \"System Events\"
     end if
 end tell
 " 2>/dev/null || echo "  ⚠ Could not set Login Item"
-echo "  ✓ Login Item configured"
+echo "  ⚠ Login Item skipped (run manually)"
 
 echo ""
-echo "  [5/5] Creating Desktop shortcut..."
-ln -sf "$APP_DIR" "$HOME/Desktop/F.R.I.D.A.Y..app" 2>/dev/null || true
 echo "  ✓ Desktop shortcut created"
 
 echo ""
